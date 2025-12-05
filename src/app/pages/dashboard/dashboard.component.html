@@ -1,0 +1,171 @@
+<main class="app-shell">
+  <app-sidebar></app-sidebar>
+
+  <section class="main">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Dashboard | por departamento</p>
+        <h1>{{ currentDepartment()?.name }} | desempeno de equipo</h1>
+        <p class="muted">Avance calculado por departamento, no por agente.</p>
+      </div>
+      <div class="header-capsule">
+        <span class="label">Departamento activo</span>
+        <div class="pill strong">
+          <span class="dot" [style.background]="currentDepartment()?.color ?? '#22d3ee'"></span>
+          {{ currentDepartment()?.name }}
+        </div>
+      </div>
+    </header>
+
+    <section class="metrics-grid">
+      <article class="metric-card">
+        <div class="metric-label">Progreso</div>
+        <div class="metric-value">{{ departmentMetrics().progress }}%</div>
+        <div class="progress big">
+          <div
+            class="progress-bar"
+            [style.width]="departmentMetrics().progress + '%'"
+            [style.background]="currentDepartment()?.color ?? '#22d3ee'"
+          ></div>
+        </div>
+        <p class="muted">Tareas completadas vs total del equipo</p>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">Tareas abiertas</div>
+        <div class="metric-value">{{ departmentMetrics().pending + departmentMetrics().inProgress }}</div>
+        <p class="muted">{{ departmentMetrics().pending }} pendientes | {{ departmentMetrics().inProgress }} en progreso</p>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">Vencidas</div>
+        <div class="metric-value alert-text">{{ departmentMetrics().overdue }}</div>
+        <p class="muted">No cuentan tareas cerradas; revisar prioridades</p>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">Prox. 7 dias</div>
+        <div class="metric-value">{{ departmentMetrics().nearDue }}</div>
+        <p class="muted">Tareas del equipo que vencen en la semana</p>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <article class="panel" id="proyectos">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Proyectos</p>
+            <h3>Avance por proyecto</h3>
+          </div>
+          <span class="chip">Depto: {{ currentDepartment()?.name }}</span>
+        </div>
+
+        <div class="project-list">
+          @for (project of projectSummaries(); track project.id) {
+            <div class="project-card">
+              <div class="project-top">
+                <div>
+                  <div class="project-name">{{ project.name }}</div>
+                  <div class="project-meta">{{ project.description }}</div>
+                </div>
+                <span class="pill soft">{{ project.done }}/{{ project.total }} hechas</span>
+              </div>
+              <div class="project-progress">
+                <div class="progress">
+                  <div
+                    class="progress-bar"
+                    [style.width]="project.progress + '%'"
+                    [style.background]="currentDepartment()?.color ?? '#22d3ee'"
+                  ></div>
+                </div>
+                <div class="project-stats">
+                  <span>{{ project.progress }}%</span>
+                  <span>{{ project.open }} abiertas</span>
+                  <span [class.alert-text]="project.overdue > 0">{{ project.overdue }} vencidas</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="panel" id="tareas">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Tareas</p>
+            <h3>Tablero por estado</h3>
+          </div>
+        </div>
+
+        <div class="board-grid">
+          <div class="column">
+            <div class="column-header">
+              <span class="dot small pending"></span>
+              <div>Por hacer</div>
+              <span class="pill">{{ boardColumns().pending.length }}</span>
+            </div>
+            <div class="column-body">
+              @if (boardColumns().pending.length === 0) {
+                <p class="muted small">Sin tareas pendientes</p>
+              }
+              @for (task of boardColumns().pending; track task.id) {
+                <div class="task-card">
+                  <div class="task-title">{{ task.title }}</div>
+                  <div class="task-meta">
+                    <span class="badge low">Prioridad {{ task.priority }}</span>
+                    <span class="badge ghost">{{ projectName(task.projectId) }}</span>
+                  </div>
+                  <div class="task-due">Vence {{ task.due }}</div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="column-header">
+              <span class="dot small progress"></span>
+              <div>En progreso</div>
+              <span class="pill">{{ boardColumns().inProgress.length }}</span>
+            </div>
+            <div class="column-body">
+              @if (boardColumns().inProgress.length === 0) {
+                <p class="muted small">Sin tareas en progreso</p>
+              }
+              @for (task of boardColumns().inProgress; track task.id) {
+                <div class="task-card">
+                  <div class="task-title">{{ task.title }}</div>
+                  <div class="task-meta">
+                    <span class="badge mid">Prioridad {{ task.priority }}</span>
+                    <span class="badge ghost">{{ projectName(task.projectId) }}</span>
+                  </div>
+                  <div class="task-due">Vence {{ task.due }}</div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="column-header">
+              <span class="dot small done"></span>
+              <div>Completado</div>
+              <span class="pill">{{ boardColumns().done.length }}</span>
+            </div>
+            <div class="column-body">
+              @if (boardColumns().done.length === 0) {
+                <p class="muted small">Aun sin tareas cerradas</p>
+              }
+              @for (task of boardColumns().done; track task.id) {
+                <div class="task-card">
+                  <div class="task-title">{{ task.title }}</div>
+                  <div class="task-meta">
+                    <span class="badge success">Prioridad {{ task.priority }}</span>
+                    <span class="badge ghost">{{ projectName(task.projectId) }}</span>
+                  </div>
+                  <div class="task-due">Cerrada {{ task.due }}</div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </article>
+
+    </section>
+  </section>
+</main>

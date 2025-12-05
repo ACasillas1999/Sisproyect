@@ -32,9 +32,10 @@ export interface Task {
 
 export interface User {
   id: string;
-  email: string;
+  username: string;
   role: string;
   createdAt: string;
+  active?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -58,11 +59,11 @@ export class DataService {
     return this.http.get<User[]>(`${this.baseUrl}/users`);
   }
 
-  createUser(payload: { email: string; password: string; role: string }): Observable<User> {
+  createUser(payload: { username: string; password: string; role: string; active?: number }): Observable<User> {
     return this.http.post<User>(`${this.baseUrl}/users`, payload);
   }
 
-  updateUser(id: string, payload: { email?: string; password?: string; role?: string }) {
+  updateUser(id: string, payload: { username?: string; email?: string; password?: string; role?: string; active?: number }) {
     return this.http.put<User>(`${this.baseUrl}/users/${id}`, payload);
   }
 
@@ -70,7 +71,7 @@ export class DataService {
     return this.http.delete<{ id: string }>(`${this.baseUrl}/users/${id}`);
   }
 
-  login(payload: { email: string; password: string }) {
+  login(payload: { username: string; password: string }) {
     return this.http.post<{ ok: boolean; user?: User }>(`${this.baseUrl}/login`, payload);
   }
 }

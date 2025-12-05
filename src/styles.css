@@ -8,3 +8,50 @@ html, body {
 * {
   box-sizing: border-box;
 }
+
+/* Botones globales */
+.primary-btn,
+.ghost-btn,
+.danger-btn {
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  border: 1px solid transparent;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #22d3ee, #6366f1);
+  color: #0b1221;
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+}
+
+.ghost-btn {
+  background: rgba(148, 163, 184, 0.08);
+  color: #e2e8f0;
+  border-color: #1f2937;
+}
+
+.ghost-btn:hover {
+  border-color: #22d3ee;
+  color: #e0f2fe;
+}
+
+.danger-btn {
+  border-radius: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.1);
+  color: #fca5a5;
+  padding: 0.5rem 0.7rem;
+}
+
+.danger-btn:hover {
+  background: rgba(248, 113, 113, 0.2);
+}

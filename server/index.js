@@ -59,28 +59,28 @@ async function main() {
 
   app.get('/api/users', async (_req, res) => {
     const [rows] = await pool.query(
-      'SELECT id, email, role, created_at AS createdAt FROM users ORDER BY created_at DESC',
+      'SELECT id, username, email, role, active, created_at AS createdAt FROM users ORDER BY created_at DESC',
     );
     res.json(rows);
   });
 
   app.post('/api/users', async (req, res) => {
     try {
-      const { email, password, role } = req.body ?? {};
-      if (!email || !password || !role) {
-        return res.status(400).json({ message: 'email, password y role son requeridos' });
+      const { username, email, password, role, active } = req.body ?? {};
+      if (!username || !password || !role) {
+        return res.status(400).json({ message: 'username, password y role son requeridos' });
       }
       const hashed = await bcrypt.hash(password, 10);
       const id = crypto.randomUUID();
       await pool.query(
-        'INSERT INTO users (id, email, password_hash, role) VALUES (?, ?, ?, ?)',
-        [id, email, hashed, role],
+        'INSERT INTO users (id, username, email, password_hash, role, active) VALUES (?, ?, ?, ?, ?, ?)',
+        [id, username, email || `${username}@local`, hashed, role, active === 0 ? 0 : 1],
       );
-      res.status(201).json({ id, email, role });
+      res.status(201).json({ id, username, email: email || '', role, active: active === 0 ? 0 : 1 });
     } catch (err) {
       console.error('Error creating user', err);
       if (err && err.code === 'ER_DUP_ENTRY') {
-        return res.status(409).json({ message: 'El correo ya existe' });
+        return res.status(409).json({ message: 'El usuario o correo ya existe' });
       }
       res.status(500).json({ message: 'Error creando usuario' });
     }
@@ -89,17 +89,13 @@ async function main() {
   app.put('/api/users/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const { email, password, role } = req.body ?? {};
+      const { username, email, password, role, active } = req.body ?? {};
       const fields = [];
       const params = [];
-      if (email) {
-        fields.push('email = ?');
-        params.push(email);
-      }
-      if (role) {
-        fields.push('role = ?');
-        params.push(role);
-      }
+      if (username) { fields.push('username = ?'); params.push(username); }
+      if (email) { fields.push('email = ?'); params.push(email); }
+      if (role) { fields.push('role = ?'); params.push(role); }
+      if (active === 0 || active === 1) { fields.push('active = ?'); params.push(active); }
       if (password) {
         const hashed = await bcrypt.hash(password, 10);
         fields.push('password_hash = ?');
@@ -110,7 +106,7 @@ async function main() {
       }
       params.push(id);
       await pool.query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, params);
-      res.json({ id, email, role });
+      res.json({ id, username, email, role, active });
     } catch (err) {
       console.error('Error updating user', err);
       res.status(500).json({ message: 'Error actualizando usuario' });
@@ -130,23 +126,26 @@ async function main() {
 
   app.post('/api/login', async (req, res) => {
     try {
-      const { email, password } = req.body ?? {};
-      if (!email || !password) {
-        return res.status(400).json({ message: 'email y password son requeridos' });
+      const { username, password } = req.body ?? {};
+      if (!username || !password) {
+        return res.status(400).json({ message: 'username y password son requeridos' });
       }
       const [rows] = await pool.query(
-        'SELECT id, email, role, password_hash FROM users WHERE email = ? LIMIT 1',
-        [email],
+        'SELECT id, username, email, role, password_hash FROM users WHERE username = ? OR email = ? LIMIT 1',
+        [username, username],
       );
       if (!rows.length) {
         return res.status(401).json({ message: 'Credenciales invalidas' });
       }
       const user = rows[0];
+      if (!user.active) {
+        return res.status(401).json({ message: 'Usuario inactivo' });
+      }
       const ok = await bcrypt.compare(password, user.password_hash);
       if (!ok) {
         return res.status(401).json({ message: 'Credenciales invalidas' });
       }
-      res.json({ ok: true, user: { id: user.id, email: user.email, role: user.role } });
+      res.json({ ok: true, user: { id: user.id, username: user.username, role: user.role } });
     } catch (err) {
       console.error('Error en login', err);
       res.status(500).json({ message: 'Error en login' });
@@ -167,10 +166,17 @@ async function initTables(pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id CHAR(36) PRIMARY KEY,
+      username VARCHAR(100) NOT NULL UNIQUE,
       email VARCHAR(255) NOT NULL UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
       role VARCHAR(50) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  // Intentar agregar username si la tabla existe sin la columna
+  try {
+    await pool.query('ALTER TABLE users ADD COLUMN username VARCHAR(100) NOT NULL UNIQUE AFTER id');
+  } catch (err) {
+    // ignorar si ya existe
+  }
 }

@@ -1,0 +1,99 @@
+<main class="app-shell">
+  <app-sidebar></app-sidebar>
+
+  <section class="main">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Usuarios</p>
+        <h1>Listado de usuarios</h1>
+      </div>
+      <div class="action-group">
+        <button class="primary-btn" type="button" (click)="startCreate()">Nuevo usuario</button>
+      </div>
+    </header>
+
+    <section class="content-grid">
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Listado</p>
+            <h3>Usuarios</h3>
+          </div>
+        </div>
+
+        <div class="users-table">
+          <div class="users-header">
+            <span>Usuario</span>
+            <span>Rol</span>
+            <span>Estatus</span>
+            <span>Acciones</span>
+          </div>
+          @for (user of users(); track user.id) {
+            <div class="users-row">
+              <span>{{ user.username }}</span>
+              <span class="badge ghost">{{ user.role }}</span>
+              <span class="badge" [class.success]="user.active" [class.alert-text]="!user.active">
+                {{ user.active ? 'Activo' : 'Inactivo' }}
+              </span>
+              <div class="action-group">
+                <button class="ghost-btn" type="button" (click)="startEdit(user)">Editar</button>
+                <button class="danger-btn" type="button" (click)="deleteUser(user.id)">Eliminar</button>
+              </div>
+            </div>
+          }
+          @if (users().length === 0) {
+            <p class="muted small">Sin usuarios registrados</p>
+          }
+        </div>
+      </article>
+    </section>
+
+    @if (showModal()) {
+      <div class="modal-backdrop" (click)="closeModal()">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div>
+              <p class="eyebrow">Formulario</p>
+              <h3>{{ isEditing() ? 'Editar usuario' : 'Crear usuario' }}</h3>
+            </div>
+            <button class="ghost-btn" type="button" (click)="closeModal()">Cerrar</button>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-card">
+              <div class="form-control">
+                <label>Username</label>
+                <input type="text" [(ngModel)]="form().username" placeholder="usuario" />
+              </div>
+              <div class="form-control">
+                <label>Password {{ isEditing() ? '(opcional al editar)' : '' }}</label>
+                <input type="password" [(ngModel)]="form().password" placeholder="Min 6 caracteres" />
+              </div>
+              <div class="form-control">
+                <label>Rol</label>
+                <select [(ngModel)]="form().role">
+                  <option value="admin">admin</option>
+                  <option value="lider">lider</option>
+                  <option value="usuario">usuario</option>
+                </select>
+              </div>
+              <div class="form-control">
+                <label>
+                  <input type="checkbox" [(ngModel)]="form().active" />
+                  Activo
+                </label>
+              </div>
+              <div class="action-group">
+                <button class="primary-btn" type="button" (click)="saveUser()">
+                  {{ isEditing() ? 'Actualizar' : 'Crear usuario' }}
+                </button>
+                <button class="ghost-btn" type="button" (click)="closeModal()">Cancelar</button>
+              </div>
+              <p class="muted" *ngIf="message()">{{ message() }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </section>
+</main>

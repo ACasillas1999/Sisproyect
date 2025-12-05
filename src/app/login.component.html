@@ -1,0 +1,17 @@
+<div class="login-shell">
+  <div class="login-card">
+    <h1>Login</h1>
+    <p class="muted">Accede con tu usuario y password</p>
+    <div class="form-control">
+      <label>Usuario</label>
+      <input type="text" [(ngModel)]="form.username" placeholder="usuario" />
+    </div>
+    <div class="form-control">
+      <label>Password</label>
+      <input type="password" [(ngModel)]="form.password" placeholder="Ingresa tu password" />
+    </div>
+    <button class="primary-btn" type="button" (click)="login()">Ingresar</button>
+    <p class="muted" *ngIf="message()">{{ message() }}</p>
+  </div>
+  <div> <h1>Alex-Nomeacuerd0 ya tu sabe que es</h1></div>
+</div>
