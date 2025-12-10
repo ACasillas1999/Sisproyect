@@ -1,0 +1,203 @@
+<div class="layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="main-content">
+    <div class="content-header">
+      <div>
+        <h2>Espacios de Trabajo</h2>
+        <p class="subtitle">Organiza tus proyectos en diferentes espacios</p>
+      </div>
+      <button class="btn-primary" (click)="openCreateModal()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <line x1="12" y1="5" x2="12" y2="19" stroke-width="2" stroke-linecap="round"/>
+          <line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Nuevo Espacio
+      </button>
+    </div>
+
+    <div class="workspaces-grid">
+      @for (workspace of workspaces(); track workspace.id) {
+        <div class="workspace-card" [style.border-color]="workspace.color">
+          <div class="workspace-header">
+            <div class="workspace-icon" [style.background-color]="workspace.color + '20'" [style.color]="workspace.color">
+              @if (workspace.icon) {
+                <span>{{ workspace.icon }}</span>
+              } @else {
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-width="2"/>
+                  <polyline points="9 22 9 12 15 12 15 22" stroke-width="2"/>
+                </svg>
+              }
+            </div>
+            <div class="workspace-actions">
+              <button class="icon-btn" (click)="openEditModal(workspace)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
+                </svg>
+              </button>
+              <button class="icon-btn delete" (click)="deleteWorkspace(workspace)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <polyline points="3 6 5 6 21 6" stroke-width="2"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="workspace-info">
+            <h3>{{ workspace.name }}</h3>
+            <p class="workspace-description">{{ workspace.description || 'Sin descripción' }}</p>
+          </div>
+
+          <div class="workspace-footer">
+            <div class="workspace-stat">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/>
+              </svg>
+              <span>{{ getProjectCount(workspace.id) }} proyectos</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (workspaces().length === 0) {
+        <div class="empty-state">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-width="2"/>
+          </svg>
+          <h3>No hay espacios de trabajo</h3>
+          <p>Crea tu primer espacio para organizar tus proyectos</p>
+          <button class="btn-ghost" (click)="openCreateModal()">Crear Espacio</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- Create Modal -->
+@if (showCreateModal()) {
+  <div class="modal-backdrop" (click)="showCreateModal.set(false)">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Nuevo Espacio de Trabajo</h3>
+        <button class="close-btn" (click)="showCreateModal.set(false)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2"/>
+          </svg>
+        </button>
+      </div>
+
+      <form (ngSubmit)="createWorkspace()">
+        <div class="form-field">
+          <label>Nombre del Espacio *</label>
+          <input type="text" [(ngModel)]="newWorkspace().name" name="name" 
+                 placeholder="Ej: Desarrollo Web" required>
+        </div>
+
+        <div class="form-field">
+          <label>Descripción</label>
+          <textarea [(ngModel)]="newWorkspace().description" name="description"
+                    placeholder="Describe este espacio de trabajo..." rows="3"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label>Color</label>
+            <input type="color" [(ngModel)]="newWorkspace().color" name="color">
+          </div>
+          <div class="form-field">
+            <label>Icono (Emoji)</label>
+            <div class="emoji-selector">
+              <button type="button" class="emoji-display" (click)="showEmojiPickerCreate.set(!showEmojiPickerCreate())">
+                {{ newWorkspace().icon || '📁' }}
+              </button>
+              @if (showEmojiPickerCreate()) {
+                <div class="emoji-picker">
+                  @for (emoji of availableEmojis; track emoji) {
+                    <button type="button" class="emoji-option" (click)="selectEmoji(emoji, false)">
+                      {{ emoji }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" (click)="showCreateModal.set(false)">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-primary">
+            Crear Espacio
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Edit Modal -->
+@if (showEditModal() && editWorkspace()) {
+  <div class="modal-backdrop" (click)="showEditModal.set(false)">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Editar Espacio de Trabajo</h3>
+        <button class="close-btn" (click)="showEditModal.set(false)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2"/>
+          </svg>
+        </button>
+      </div>
+
+      <form (ngSubmit)="updateWorkspace()">
+        <div class="form-field">
+          <label>Nombre del Espacio *</label>
+          <input type="text" [(ngModel)]="editWorkspace()!.name" name="name" required>
+        </div>
+
+        <div class="form-field">
+          <label>Descripción</label>
+          <textarea [(ngModel)]="editWorkspace()!.description" name="description" rows="3"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label>Color</label>
+            <input type="color" [(ngModel)]="editWorkspace()!.color" name="color">
+          </div>
+          <div class="form-field">
+            <label>Icono (Emoji)</label>
+            <div class="emoji-selector">
+              <button type="button" class="emoji-display" (click)="showEmojiPickerEdit.set(!showEmojiPickerEdit())">
+                {{ editWorkspace()!.icon || '📁' }}
+              </button>
+              @if (showEmojiPickerEdit()) {
+                <div class="emoji-picker">
+                  @for (emoji of availableEmojis; track emoji) {
+                    <button type="button" class="emoji-option" (click)="selectEmoji(emoji, true)">
+                      {{ emoji }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" (click)="showEditModal.set(false)">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-primary">
+            Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

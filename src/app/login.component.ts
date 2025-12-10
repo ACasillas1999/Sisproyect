@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { DataService } from './data.service';
 import { AuthService } from './auth.service';
+import { SpinnerComponent } from './components/spinner/spinner.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SpinnerComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
@@ -19,14 +20,18 @@ export class LoginComponent {
 
   protected form = { username: '', password: '' };
   protected message = signal('');
+  protected isLoading = signal(false);
 
   protected login() {
     if (!this.form.username || !this.form.password) {
       this.message.set('Usuario y password requeridos');
       return;
     }
+    this.isLoading.set(true);
+    this.message.set('');
     this.dataService.login(this.form).subscribe({
       next: (resp) => {
+        this.isLoading.set(false);
         if (resp.ok && resp.user) {
           this.auth.login({
             id: resp.user.id,
@@ -38,7 +43,10 @@ export class LoginComponent {
           this.message.set('Credenciales invalidas');
         }
       },
-      error: () => this.message.set('Credenciales invalidas'),
+      error: () => {
+        this.isLoading.set(false);
+        this.message.set('Credenciales invalidas');
+      },
     });
   }
 }

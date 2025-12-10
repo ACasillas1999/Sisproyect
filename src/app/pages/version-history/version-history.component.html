@@ -1,0 +1,146 @@
+<div class="layout">
+  <app-sidebar></app-sidebar>
+  <div class="main-content">
+    <div class="header-section">
+      <button class="back-btn" [routerLink]="['/projects', projectId()]">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M19 12H5M12 19l-7-7 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Volver al Proyecto
+      </button>
+
+      @if (project()) {
+        <div class="project-header">
+          <h1>Historial de Versiones</h1>
+          <p class="project-name">{{ project()!.name }}</p>
+        </div>
+      }
+    </div>
+
+    @if (!selectedVersion()) {
+      <!-- Versions List -->
+      <div class="versions-section">
+        @if (versions().length === 0) {
+          <div class="empty-state">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="10" stroke-width="2"/>
+              <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p>No hay versiones guardadas</p>
+            <button class="ghost-btn" [routerLink]="['/projects', projectId()]">
+              Volver al Proyecto
+            </button>
+          </div>
+        } @else {
+          <div class="versions-list">
+            @for (version of versions(); track version.id) {
+              <div class="version-card" (click)="selectVersion(version)">
+                <div class="version-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="version-info">
+                  <h3>{{ version.versionName }}</h3>
+                  <p class="version-date">{{ formatDate(version.createdAt) }}</p>
+                  <div class="version-meta">
+                    <span>{{ version.snapshotData.tasks.length }} tareas</span>
+                  </div>
+                </div>
+                <div class="version-arrow">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <!-- Version Detail View -->
+      <div class="version-detail">
+        <div class="detail-header">
+          <button class="back-btn" (click)="closeVersionView()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M19 12H5M12 19l-7-7 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Volver al Historial
+          </button>
+
+          <div class="version-title">
+            <h2>{{ selectedVersion()!.versionName }}</h2>
+            <p class="version-timestamp">{{ formatDate(selectedVersion()!.createdAt) }}</p>
+          </div>
+        </div>
+
+        @if (versionStats()) {
+          <div class="stats-section">
+            <div class="stat-card">
+              <div class="stat-label">Total Tareas</div>
+              <div class="stat-value">{{ versionStats()!.total }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Completadas</div>
+              <div class="stat-value success">{{ versionStats()!.completed }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">En Progreso</div>
+              <div class="stat-value progress">{{ versionStats()!.inProgress }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Pendientes</div>
+              <div class="stat-value pending">{{ versionStats()!.pending }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Canceladas</div>
+              <div class="stat-value cancelled">{{ versionStats()!.cancelled }}</div>
+            </div>
+          </div>
+        }
+
+        <div class="tasks-snapshot">
+          <h3>Tareas en esta Versión</h3>
+          @if (selectedVersion()!.snapshotData.tasks.length === 0) {
+            <p class="no-tasks">No había tareas en esta versión</p>
+          } @else {
+            <div class="tasks-list">
+              @for (task of selectedVersion()!.snapshotData.tasks; track task.id) {
+                <div class="task-card">
+                  <div class="task-header">
+                    <h4>{{ task.title }}</h4>
+                    <span class="status-badge" [attr.data-status]="task.status">
+                      {{ getStatusLabel(task.status) }}
+                    </span>
+                  </div>
+                  @if (task.description) {
+                    <p class="task-description">{{ task.description }}</p>
+                  }
+                  <div class="task-footer">
+                    @if (task.priority) {
+                      <span class="priority-badge" [attr.data-priority]="task.priority">
+                        {{ task.priority }}
+                      </span>
+                    }
+                    @if (task.due) {
+                      <span class="task-due">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                          <line x1="16" y1="2" x2="16" y2="6" stroke-width="2" stroke-linecap="round"/>
+                          <line x1="8" y1="2" x2="8" y2="6" stroke-width="2" stroke-linecap="round"/>
+                          <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                        </svg>
+                        {{ task.due }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

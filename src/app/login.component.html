@@ -4,14 +4,23 @@
     <p class="muted">Accede con tu usuario y password</p>
     <div class="form-control">
       <label>Usuario</label>
-      <input type="text" [(ngModel)]="form.username" placeholder="usuario" />
+      <input type="text" [(ngModel)]="form.username" placeholder="usuario" [disabled]="isLoading()" />
     </div>
     <div class="form-control">
       <label>Password</label>
-      <input type="password" [(ngModel)]="form.password" placeholder="Ingresa tu password" />
+      <input type="password" [(ngModel)]="form.password" placeholder="Ingresa tu password" [disabled]="isLoading()" />
     </div>
-    <button class="primary-btn" type="button" (click)="login()">Ingresar</button>
+    <button class="primary-btn" type="button" (click)="login()" [disabled]="isLoading()">
+      @if (isLoading()) {
+        <span class="btn-spinner">
+          <app-spinner size="small" color="white"></app-spinner>
+          Ingresando...
+        </span>
+      } @else {
+        Ingresar
+      }
+    </button>
     <p class="muted" *ngIf="message()">{{ message() }}</p>
   </div>
-  <div> <h1>Alex-Nomeacuerd0 ya tu sabe que es</h1></div>
+  <div> <h1>Alex-123456</h1></div>
 </div>

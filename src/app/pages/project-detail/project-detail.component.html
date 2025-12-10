@@ -1,0 +1,848 @@
+<div class="layout">
+  <app-sidebar></app-sidebar>
+  <div class="main-content">
+    <div class="header-section">
+      <div class="header-top">
+        <button class="back-btn" routerLink="/">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M19 12H5M12 19l-7-7 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Volver
+        </button>
+        <div class="header-actions">
+          @if (canManageProject()) {
+            <button class="action-btn" (click)="openEditProjectModal()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Editar Proyecto
+            </button>
+          }
+          <button class="action-btn" (click)="goToVersionHistory()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="10" stroke-width="2"/>
+              <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Historial de Versiones
+          </button>
+          @if (canManageProject()) {
+            <button class="primary-btn" (click)="openCreateVersionModal()">
+              Guardar Versión
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (project()) {
+        <div class="project-header">
+          <div class="project-title-row">
+            <h1>{{ project()!.name }}</h1>
+            <div class="status-controls">
+              <span class="status-badge-large" [attr.data-status]="project()!.status || 'development'">
+                {{ getProjectStatusLabel(project()!.status || 'development') }}
+              </span>
+              @if (project()!.status === 'development') {
+                <button class="status-btn production" (click)="changeProjectStatus('production')" title="Marcar como Producción">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="22 4 12 14.01 9 11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Marcar como Producción
+                </button>
+              } @else {
+                <button class="status-btn development" (click)="changeProjectStatus('development')" title="Volver a Desarrollo">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 2v6m0 4v10M6 8l6 6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Volver a Desarrollo
+                </button>
+              }
+            </div>
+          </div>
+          <p class="project-description">{{ project()!.description || 'Sin descripción' }}</p>
+          @if (project()!.start || project()!.end) {
+            <div class="project-dates">
+              @if (project()!.start) {
+                <div class="date-item">
+                  <span class="label">Inicio:</span>
+                  <span class="value">{{ project()!.start | date:'mediumDate' }}</span>
+                </div>
+              }
+              @if (project()!.end) {
+                <div class="date-item">
+                  <span class="label">Fin:</span>
+                  <span class="value">{{ project()!.end | date:'mediumDate' }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Progress by Department -->
+    <div class="progress-section">
+      <h2>Progreso por Departamento</h2>
+      @if (activeDepartments().length === 0) {
+        <div class="empty-state">
+          <p>No hay tareas asignadas a departamentos en este proyecto</p>
+        </div>
+      } @else {
+        <div class="progress-grid">
+          @for (dept of activeDepartments(); track dept.department.id) {
+            <div class="progress-card">
+              <div class="progress-header">
+                <div class="dept-badge" [style.background]="dept.department.color">
+                  {{ dept.department.name }}
+                </div>
+                <div class="progress-percent">{{ dept.progress }}%</div>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" [style.width.%]="dept.progress" [style.background]="dept.department.color"></div>
+              </div>
+              <div class="progress-stats">
+                <span>Total: {{ dept.total }}</span>
+                <span>Completadas: {{ dept.completed }}</span>
+                <span>En Progreso: {{ dept.inProgress }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Version Filter -->
+    <div class="version-filter-section">
+      <div class="version-filter-header">
+        <h3>Filtrar por Versión</h3>
+        <div class="version-selector">
+          <select [(ngModel)]="selectedVersionFilter" (ngModelChange)="setVersionFilter($event)" class="version-select">
+            <option [ngValue]="null">Trabajo Actual (Sin Versionar)</option>
+            <option value="all">Todas las Versiones</option>
+            @for (version of versions(); track version.id) {
+              <option [value]="version.id">{{ version.versionName }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      <div class="current-filter-info">
+        <span class="filter-label">Mostrando:</span>
+        <span class="filter-value">{{ getVersionFilterLabel() }}</span>
+      </div>
+    </div>
+
+    <!-- Tasks Section -->
+    <div class="tasks-section">
+      <div class="section-header">
+        <h2>Tareas del Proyecto</h2>
+        <div class="header-actions">
+          <button class="ghost-btn filter-btn" (click)="toggleHideCompletedTasks()" [class.active]="hideCompletedTasks()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="22 4 12 14.01 9 11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ hideCompletedTasks() ? 'Mostrar Completadas' : 'Ocultar Completadas' }}
+          </button>
+          @if (canManageProject()) {
+            <button class="primary-btn" (click)="openCreateTaskModal(null)">
+              + Nueva Tarea
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (taskTree().length === 0) {
+        <div class="empty-state">
+          <p>
+            @if (selectedVersionFilter() === null) {
+              {{ hideCompletedTasks() ? 'No hay tareas activas sin versionar' : 'No hay tareas sin versionar en este proyecto' }}
+            } @else if (selectedVersionFilter() === 'all') {
+              {{ hideCompletedTasks() ? 'No hay tareas activas' : 'No hay tareas en este proyecto' }}
+            } @else {
+              {{ hideCompletedTasks() ? 'No hay tareas activas en esta versión' : 'No hay tareas en esta versión' }}
+            }
+          </p>
+          <button class="ghost-btn" (click)="openCreateTaskModal(null)">Crear Tarea</button>
+        </div>
+      } @else {
+        <div class="tasks-tree">
+          @for (node of taskTree(); track node.task.id) {
+            <div class="task-node">
+              @defer {
+                <ng-container [ngTemplateOutlet]="taskTemplate" [ngTemplateOutletContext]="{node: node, level: 0}"></ng-container>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Documents Section -->
+    <div class="documents-section">
+      <div class="section-header">
+        <h2>Documentación</h2>
+        @if (canManageProject()) {
+          <button class="primary-btn" (click)="openUploadDocumentModal()">
+            + Subir Documento
+          </button>
+        }
+      </div>
+
+      @if (filteredDocuments().length === 0) {
+        <div class="empty-state">
+          <p>No hay documentos {{ selectedVersionFilter() === null ? 'sin versionar' : 'en esta vista' }}</p>
+          <button class="ghost-btn" (click)="openUploadDocumentModal()">Subir Documento</button>
+        </div>
+      } @else {
+        <div class="documents-grid">
+          @for (doc of filteredDocuments(); track doc.id) {
+            <div class="document-card">
+              <div class="doc-header">
+                <h4>{{ doc.title }}</h4>
+                @if (doc.versionName) {
+                  <span class="doc-version">{{ doc.versionName }}</span>
+                }
+                @if (doc.taskTitle) {
+                  <span class="doc-task-ref">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {{ doc.taskTitle }}
+                  </span>
+                }
+              </div>
+              @if (doc.description) {
+                <p class="doc-desc">{{ doc.description }}</p>
+              }
+              <div class="doc-meta">
+                <span class="doc-file">{{ doc.fileName || 'Archivo' }}</span>
+                <div class="doc-actions">
+                  <button class="doc-link-btn" (click)="openFilePreview(doc.filePath, doc.fileName || 'Documento')" title="Vista previa">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="12" cy="12" r="3" stroke-width="2"/>
+                    </svg>
+                  </button>
+                  <a class="doc-link-btn" [href]="buildFileUrl(doc.filePath)" target="_blank" download title="Descargar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline points="7 10 12 15 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="12" y1="15" x2="12" y2="3" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+              <div class="doc-footer">
+                <span>Subido {{ doc.createdAt | date:'short' }}</span>
+                @if (doc.createdByName) {
+                  <span>por {{ doc.createdByName }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- Task Template (Recursive) -->
+<ng-template #taskTemplate let-node="node" let-level="level">
+  <div class="task-item" [class.context-only]="node.task.isOwnDepartment === false" [style.margin-left.px]="level * 32">
+    <div class="task-content">
+      <div class="task-left">
+        @if (node.children.length > 0) {
+          <button class="expand-btn" (click)="toggleTask(node.task.id)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 [class.expanded]="isExpanded(node.task.id)">
+              <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        } @else {
+          <div class="expand-placeholder"></div>
+        }
+
+        <div class="task-info">
+          <h4>{{ node.task.title }}</h4>
+          @if (node.task.description) {
+            <p class="task-description">{{ node.task.description }}</p>
+          }
+          <div class="task-meta">
+            @if (node.task.assignedTo) {
+              <span class="task-assigned">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-width="2"/>
+                  <circle cx="12" cy="7" r="4" stroke-width="2"/>
+                </svg>
+                {{ getUserName(node.task.assignedTo) }}
+                @if (getUserDepartmentName(node.task.assignedTo)) {
+                  <span class="task-assigned-dept" [style.background]="getUserDepartmentColor(node.task.assignedTo)">
+                    {{ getUserDepartmentName(node.task.assignedTo) }}
+                  </span>
+                }
+              </span>
+            } @else {
+              <span class="task-unassigned">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                  <line x1="12" y1="8" x2="12" y2="12" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Sin asignar
+              </span>
+            }
+            @if (node.task.departmentId) {
+              <span class="task-dept" [style.background]="getDepartmentColor(node.task.departmentId)">
+                {{ getDepartmentName(node.task.departmentId) }}
+              </span>
+            }
+            @if (node.task.due) {
+              <span class="task-due">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="8" y1="2" x2="8" y2="6" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                </svg>
+                {{ node.task.due | date:'shortDate' }}
+              </span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="task-right">
+        <span class="status-badge" [attr.data-status]="node.task.status">
+          {{ getStatusLabel(node.task.status) }}
+        </span>
+
+        @if (node.task.releasedVersionId) {
+          <span class="version-badge" [title]="'Incluida en versión: ' + (node.task.releasedVersionName || 'Sin nombre')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="22 4 12 14.01 9 11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ node.task.releasedVersionName || 'Versionada' }}
+          </span>
+        }
+
+        <div class="task-actions">
+          @if (canTakeTask(node.task) && node.task.isOwnDepartment !== false) {
+            <button class="action-btn-small take" (click)="takeTask(node.task.id)" title="Agarrar Tarea">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M7 10l5 5 5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          }
+          @if (node.task.status === 'pending' && canManageStatus(node.task) && node.task.isOwnDepartment !== false) {
+            <button class="action-btn-small" (click)="updateTaskStatus(node.task.id, 'in-progress')" title="Iniciar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          }
+          @if (node.task.status === 'in-progress' && canManageStatus(node.task) && node.task.isOwnDepartment !== false) {
+            <button class="action-btn-small success" (click)="updateTaskStatus(node.task.id, 'completed')" title="Completar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          }
+          @if (node.task.status !== 'cancelled' && node.task.status !== 'completed' && canManageStatus(node.task) && node.task.isOwnDepartment !== false) {
+            <button class="action-btn-small warning" (click)="updateTaskStatus(node.task.id, 'cancelled')" title="Cancelar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+                <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          }
+          @if (node.task.isOwnDepartment !== false) {
+            <button class="action-btn-small" (click)="openCreateTaskModal(node.task.id)" title="Añadir Subtarea">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <line x1="12" y1="5" x2="12" y2="19" stroke-width="2" stroke-linecap="round"/>
+                <line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          }
+          @if ((node.task.status === 'completed' || node.task.status === 'cancelled') && canManageStatus(node.task) && node.task.isOwnDepartment !== false) {
+            <button class="action-btn-small info" (click)="openTaskDetail(node.task)" title="Ver Detalles">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <line x1="12" y1="16" x2="12" y2="12" stroke-width="2" stroke-linecap="round"/>
+                <line x1="12" y1="8" x2="12.01" y2="8" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          }
+          @if (node.task.isOwnDepartment !== false) {
+            <button class="action-btn-small danger" (click)="deleteTask(node.task.id)" title="Eliminar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (isExpanded(node.task.id) && node.children.length > 0) {
+      <div class="task-children">
+        @for (child of node.children; track child.task.id) {
+          <ng-container [ngTemplateOutlet]="taskTemplate" [ngTemplateOutletContext]="{node: child, level: level + 1}"></ng-container>
+        }
+      </div>
+    }
+  </div>
+</ng-template>
+
+<!-- Create Task Modal -->
+@if (showCreateTaskModal()) {
+  <div class="modal-backdrop" (click)="showCreateTaskModal.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h3>{{ newTask().parentTaskId ? 'Nueva Subtarea' : 'Nueva Tarea' }}</h3>
+      <form (ngSubmit)="createTask()">
+        <div class="form-group">
+          <label>Título *</label>
+          <input type="text" [(ngModel)]="newTask().title" name="title" required>
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea [(ngModel)]="newTask().description" name="description" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Departamento *</label>
+          <select [(ngModel)]="newTask().departmentId" name="departmentId" required>
+            <option value="">Seleccionar departamento</option>
+            @for (dept of departments(); track dept.id) {
+              <option [value]="dept.id">{{ dept.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Prioridad</label>
+            <select [(ngModel)]="newTask().priority" name="priority">
+              <option value="baja">Baja</option>
+              <option value="media">Media</option>
+              <option value="alta">Alta</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fecha límite</label>
+            <input type="date" [(ngModel)]="newTask().due" name="due">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" (click)="showCreateTaskModal.set(false)" [disabled]="isCreatingTask()">Cancelar</button>
+          <button type="submit" class="primary-btn" [disabled]="isCreatingTask()">
+            @if (isCreatingTask()) {
+              <span class="btn-spinner">
+                <app-spinner size="small" color="white"></app-spinner>
+                Creando...
+              </span>
+            } @else {
+              Crear Tarea
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Create Version Modal -->
+@if (showCreateVersionModal()) {
+  <div class="modal-backdrop" (click)="showCreateVersionModal.set(false)">
+    <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+      <h3>Guardar Versión del Proyecto</h3>
+
+      @if (versionPreview()) {
+        <div class="version-preview-section">
+          <h4>Contenido de esta versión:</h4>
+
+          <div class="preview-summary">
+            <div class="summary-item">
+              <span class="summary-count">{{ versionPreview()!.summary.tasksCount }}</span>
+              <span class="summary-label">Tareas Completadas</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-count">{{ versionPreview()!.summary.documentsCount }}</span>
+              <span class="summary-label">Documentos</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-count">{{ versionPreview()!.summary.commentsCount }}</span>
+              <span class="summary-label">Comentarios</span>
+            </div>
+          </div>
+
+          @if (versionPreview()!.tasks.length > 0) {
+            <div class="preview-section">
+              <h5>Tareas:</h5>
+              <ul class="preview-list">
+                @for (task of versionPreview()!.tasks; track task.id) {
+                  <li>{{ task.title }}</li>
+                }
+              </ul>
+            </div>
+          }
+
+          @if (versionPreview()!.documents.length > 0) {
+            <div class="preview-section">
+              <h5>Documentos:</h5>
+              <ul class="preview-list">
+                @for (doc of versionPreview()!.documents; track doc.id) {
+                  <li>
+                    {{ doc.title }}
+                    @if (doc.taskTitle) {
+                      <span class="preview-meta">(Tarea: {{ doc.taskTitle }})</span>
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+
+          @if (versionPreview()!.comments.length > 0) {
+            <div class="preview-section">
+              <h5>Comentarios:</h5>
+              <ul class="preview-list">
+                @for (comment of versionPreview()!.comments; track comment.id) {
+                  <li>
+                    <strong>{{ comment.username }}:</strong> {{ comment.comment.substring(0, 50) }}{{ comment.comment.length > 50 ? '...' : '' }}
+                    <span class="preview-meta">({{ comment.taskTitle }})</span>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+
+          @if (versionPreview()!.summary.tasksCount === 0 && versionPreview()!.summary.documentsCount === 0 && versionPreview()!.summary.commentsCount === 0) {
+            <div class="empty-state-small">
+              <p>No hay cambios nuevos para guardar en esta versión</p>
+            </div>
+          }
+        </div>
+      }
+
+      <form (ngSubmit)="createVersion()">
+        <div class="form-group">
+          <label>Nombre de la Versión *</label>
+          <input type="text" [(ngModel)]="newVersion().versionName" name="versionName"
+                 placeholder="ej: v1.0, Sprint 1, Fase Inicial" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" (click)="showCreateVersionModal.set(false)" [disabled]="isCreatingVersion()">Cancelar</button>
+          <button type="submit" class="primary-btn" [disabled]="isCreatingVersion() || !versionPreview() || (versionPreview()!.summary.tasksCount === 0 && versionPreview()!.summary.documentsCount === 0 && versionPreview()!.summary.commentsCount === 0)">
+            @if (isCreatingVersion()) {
+              <span class="btn-spinner">
+                <app-spinner size="small" color="white"></app-spinner>
+                Guardando...
+              </span>
+            } @else {
+              Guardar Versión
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Edit Project Modal -->
+@if (showEditProjectModal()) {
+  <div class="modal-backdrop" (click)="showEditProjectModal.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h3>Editar Proyecto</h3>
+      <form (ngSubmit)="updateProjectDetails()">
+        <div class="form-group">
+          <label>Nombre del Proyecto *</label>
+          <input type="text" [(ngModel)]="editProjectData().name" name="name" required>
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea [(ngModel)]="editProjectData().description" name="description" rows="3"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Estado</label>
+            <select [(ngModel)]="editProjectData().status" name="status">
+              <option value="development">En Desarrollo</option>
+              <option value="production">Producción</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Espacio de Trabajo</label>
+            <select [(ngModel)]="editProjectData().workspaceId" name="workspaceId">
+              <option value="">Sin espacio</option>
+              @for (workspace of workspaces(); track workspace.id) {
+                <option [value]="workspace.id">{{ workspace.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Logo (Opcional)</label>
+            <input type="file" (change)="onLogoSelected($event)" accept="image/*">
+            @if (logoPreview()) {
+              <div class="logo-preview">
+                <img [src]="logoPreview()" alt="Vista previa del logo">
+              </div>
+            }
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha Inicio</label>
+            <input type="date" [(ngModel)]="editProjectData().start" name="start">
+          </div>
+          <div class="form-group">
+            <label>Fecha Fin</label>
+            <input type="date" [(ngModel)]="editProjectData().end" name="end">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" (click)="showEditProjectModal.set(false)">Cancelar</button>
+          <button type="submit" class="primary-btn">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Upload Document Modal -->
+@if (showUploadDocumentModal()) {
+  <div class="modal-backdrop" (click)="showUploadDocumentModal.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h3>Subir Documento</h3>
+      <form (ngSubmit)="uploadDocument()">
+        <div class="form-group">
+          <label>Título *</label>
+          <input type="text" [(ngModel)]="newDocument().title" name="docTitle" placeholder="Ej: Especificación funcional" required>
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea [(ngModel)]="newDocument().description" name="docDescription" rows="3" placeholder="Notas o contexto del documento"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Versión</label>
+          <select [(ngModel)]="newDocument().versionId" name="docVersion">
+            <option value="">Sin versión</option>
+            @for (version of versions(); track version.id) {
+              <option [value]="version.id">{{ version.versionName }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Archivo *</label>
+          <input type="file" (change)="onFileSelected($event)" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" (click)="showUploadDocumentModal.set(false)" [disabled]="isUploadingDocument()">Cancelar</button>
+          <button type="submit" class="primary-btn" [disabled]="isUploadingDocument()">
+            @if (isUploadingDocument()) {
+              <span class="btn-spinner">
+                <app-spinner size="small" color="white"></app-spinner>
+                Subiendo...
+              </span>
+            } @else {
+              Subir Documento
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Task Detail Modal -->
+@if (showTaskDetailModal() && selectedTask()) {
+  <div class="modal-backdrop" (click)="showTaskDetailModal.set(false)">
+    <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+      <div class="modal-header-bar">
+        <h3>{{ selectedTask()!.title }}</h3>
+        <button class="close-btn" (click)="showTaskDetailModal.set(false)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      @if (selectedTask()!.description) {
+        <p class="task-detail-desc">{{ selectedTask()!.description }}</p>
+      }
+
+      <div class="task-meta-info">
+        <div class="meta-item">
+          <span class="meta-label">Estado:</span>
+          <span class="status-badge" [attr.data-status]="selectedTask()!.status">
+            {{ selectedTask()!.status === 'pending' ? 'Pendiente' :
+               selectedTask()!.status === 'in-progress' ? 'En Progreso' :
+               selectedTask()!.status === 'completed' ? 'Completada' : 'Cancelada' }}
+          </span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Prioridad:</span>
+          <span class="priority-badge" [attr.data-priority]="selectedTask()!.priority">
+            {{ selectedTask()!.priority === 'alta' ? 'Alta' :
+               selectedTask()!.priority === 'media' ? 'Media' : 'Baja' }}
+          </span>
+        </div>
+        @if (selectedTask()!.due) {
+          <div class="meta-item">
+            <span class="meta-label">Fecha límite:</span>
+            <span class="meta-value">{{ selectedTask()!.due }}</span>
+          </div>
+        }
+        @if (selectedTask()!.createdAt) {
+          <div class="meta-item">
+            <span class="meta-label">Creada el:</span>
+            <span class="meta-value">{{ selectedTask()!.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+        }
+        @if (selectedTask()!.completedAt) {
+          <div class="meta-item">
+            <span class="meta-label">Completada el:</span>
+            <span class="meta-value completed-date">{{ selectedTask()!.completedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="task-detail-tabs">
+        <div class="tab-buttons">
+          <button class="tab-btn" [class.active]="activeTaskTab() === 'comments'" (click)="switchTaskTab('comments')">
+            Comentarios
+          </button>
+          <button class="tab-btn" [class.active]="activeTaskTab() === 'documents'" (click)="switchTaskTab('documents')">
+            Documentos
+          </button>
+        </div>
+
+        <!-- Comments Section -->
+        @if (activeTaskTab() === 'comments') {
+          <div class="tab-content">
+            <div class="comments-section">
+              @if (taskComments().length === 0) {
+                <div class="empty-state-small">
+                  <p>No hay comentarios aún</p>
+                </div>
+              } @else {
+                <div class="comments-list">
+                  @for (comment of paginatedComments(); track comment.id) {
+                    <div class="comment-item">
+                      <div class="comment-header">
+                        <div>
+                          <span class="comment-user">{{ comment.userName }}</span>
+                          @if (comment.versionName) {
+                            <span class="version-badge-small">{{ comment.versionName }}</span>
+                          }
+                        </div>
+                        <span class="comment-date">{{ comment.createdAt | date:'short' }}</span>
+                      </div>
+                      <p class="comment-text">{{ comment.comment }}</p>
+                    </div>
+                  }
+                </div>
+
+                <!-- Paginación de comentarios -->
+                @if (taskComments().length > commentsPerPage) {
+                  <app-pagination
+                    [currentPage]="commentsPage()"
+                    [totalItems]="taskComments().length"
+                    [itemsPerPage]="commentsPerPage"
+                    [maxVisiblePages]="3"
+                    (pageChange)="onCommentsPageChange($event)">
+                  </app-pagination>
+                }
+              }
+
+              <div class="comment-form">
+                <textarea [(ngModel)]="newComment" placeholder="Escribe un comentario..." rows="3"></textarea>
+                <button class="primary-btn" (click)="addComment()" [disabled]="!newComment().trim()">
+                  Agregar Comentario
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Documents Section -->
+        @if (activeTaskTab() === 'documents') {
+          <div class="tab-content">
+            <div class="documents-section-task">
+            @if (taskDocuments().length === 0) {
+              <div class="empty-state-small">
+                <p>No hay documentos adjuntos</p>
+              </div>
+            } @else {
+              <div class="task-docs-list">
+                @for (doc of taskDocuments(); track doc.id) {
+                  <div class="task-doc-item">
+                    <div class="task-doc-info">
+                      <div class="task-doc-title-row">
+                        <h5>{{ doc.title }}</h5>
+                        @if (doc.versionName) {
+                          <span class="version-badge-small">{{ doc.versionName }}</span>
+                        }
+                      </div>
+                      @if (doc.description) {
+                        <p>{{ doc.description }}</p>
+                      }
+                      <div class="task-doc-meta">
+                        <span>{{ doc.fileName }}</span>
+                        <span>{{ doc.createdAt | date:'short' }}</span>
+                        @if (doc.createdByName) {
+                          <span>por {{ doc.createdByName }}</span>
+                        }
+                      </div>
+                    </div>
+                    <a class="doc-download-btn" [href]="buildFileUrl(doc.filePath)" target="_blank">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <polyline points="7 10 12 15 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="12" y1="15" x2="12" y2="3" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                      Ver
+                    </a>
+                  </div>
+                }
+              </div>
+            }
+
+            <div class="upload-task-doc-form">
+              <h4>Subir Documento</h4>
+              <div class="form-group">
+                <label>Título *</label>
+                <input type="text" [(ngModel)]="newTaskDocument().title" placeholder="Nombre del documento">
+              </div>
+              <div class="form-group">
+                <label>Descripción</label>
+                <textarea [(ngModel)]="newTaskDocument().description" rows="2" placeholder="Detalles opcionales"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Archivo *</label>
+                <input type="file" (change)="onTaskDocumentSelected($event)">
+              </div>
+              <button class="primary-btn" (click)="uploadTaskDocument()" [disabled]="!newTaskDocument().title || !newTaskDocument().file">
+                Subir Documento
+              </button>
+            </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- File Preview Modal -->
+@if (showFilePreview() && previewFile()) {
+  <app-file-preview
+    [fileUrl]="previewFile()!.url"
+    [fileName]="previewFile()!.name"
+    [fileType]="previewFile()!.type"
+    (close)="closeFilePreview()">
+  </app-file-preview>
+}

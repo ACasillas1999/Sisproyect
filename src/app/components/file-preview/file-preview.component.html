@@ -1,0 +1,62 @@
+<div class="preview-backdrop" (click)="onBackdropClick($event)">
+  <div class="preview-modal">
+    <div class="preview-header">
+      <div class="preview-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          @if (isImage) {
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          } @else if (isPDF) {
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="14 2 14 8 20 8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="16" y1="13" x2="8" y2="13" stroke-width="2" stroke-linecap="round"/>
+            <line x1="16" y1="17" x2="8" y2="17" stroke-width="2" stroke-linecap="round"/>
+            <line x1="10" y1="9" x2="8" y2="9" stroke-width="2" stroke-linecap="round"/>
+          } @else {
+            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" stroke-width="2"/>
+            <polyline points="13 2 13 9 20 9" stroke-width="2"/>
+          }
+        </svg>
+        <span>{{ fileName }}</span>
+      </div>
+      <div class="preview-actions">
+        <button class="preview-btn" (click)="downloadFile()" title="Descargar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="7 10 12 15 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="15" x2="12" y2="3" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="preview-btn close-btn" (click)="onClose()" title="Cerrar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="preview-content">
+      @if (isImage) {
+        <div class="image-container">
+          <img [src]="fileUrl" [alt]="fileName" />
+        </div>
+      } @else if (isPDF) {
+        <iframe [src]="safeUrl" class="pdf-viewer" frameborder="0"></iframe>
+      } @else {
+        <div class="unsupported-preview">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" stroke-width="2"/>
+            <polyline points="13 2 13 9 20 9" stroke-width="2"/>
+          </svg>
+          <h3>Vista previa no disponible</h3>
+          <p>Este tipo de archivo no puede ser visualizado</p>
+          <button class="primary-btn" (click)="downloadFile()">
+            Descargar Archivo
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

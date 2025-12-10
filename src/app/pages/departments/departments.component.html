@@ -1,0 +1,141 @@
+<div class="layout">
+  <app-sidebar></app-sidebar>
+  <div class="main-content">
+    <div class="header">
+      <h1>Departamentos</h1>
+      <button class="create-btn" (click)="openCreateModal()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <line x1="12" y1="5" x2="12" y2="19" stroke-width="2" stroke-linecap="round"/>
+          <line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Nuevo Departamento
+      </button>
+    </div>
+
+    @if (departments().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">🏢</div>
+        <h3>No hay departamentos</h3>
+        <p>Crea el primer departamento para organizar a tu equipo</p>
+        <button class="ghost-btn" (click)="openCreateModal()">Crear Primer Departamento</button>
+      </div>
+    } @else {
+      <div class="departments-grid">
+        @for (dept of departments(); track dept.id) {
+          <div class="department-card" [style.border-left-color]="dept.color">
+            <div class="card-header">
+              <div class="dept-info">
+                <div class="dept-color" [style.background]="dept.color"></div>
+                <h3>{{ dept.name }}</h3>
+              </div>
+              <div class="card-actions">
+                <button class="icon-btn" (click)="openEditModal(dept)" title="Editar">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button class="icon-btn danger" (click)="deleteDepartment(dept.id)" title="Eliminar">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke-width="2"/>
+                  <circle cx="9" cy="7" r="4" stroke-width="2"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke-width="2"/>
+                </svg>
+                <span>{{ getUserCount(dept.id) }} usuarios</span>
+              </div>
+              <div class="stat-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>{{ getTaskCount(dept.id) }} tareas</span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Create Modal -->
+@if (showCreateModal()) {
+  <div class="modal-backdrop" (click)="showCreateModal.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h3>Nuevo Departamento</h3>
+      <form (ngSubmit)="createDepartment()">
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input type="text" [(ngModel)]="newDepartment().name" name="name" placeholder="Ej: Desarrollo, Operaciones, Diseño" required>
+        </div>
+        <div class="form-group">
+          <label>Color</label>
+          <div class="color-picker">
+            @for (color of colorPresets; track color) {
+              <button type="button"
+                      class="color-option"
+                      [class.selected]="newDepartment().color === color"
+                      [style.background]="color"
+                      (click)="selectColorForNew(color)">
+                @if (newDepartment().color === color) {
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white">
+                    <path d="M20 6L9 17l-5-5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                }
+              </button>
+            }
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" (click)="showCreateModal.set(false)">Cancelar</button>
+          <button type="submit" class="primary-btn">Crear Departamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Edit Modal -->
+@if (showEditModal() && editDepartment()) {
+  <div class="modal-backdrop" (click)="showEditModal.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h3>Editar Departamento</h3>
+      <form (ngSubmit)="updateDepartment()">
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input type="text" [(ngModel)]="editDepartment()!.name" name="name" required>
+        </div>
+        <div class="form-group">
+          <label>Color</label>
+          <div class="color-picker">
+            @for (color of colorPresets; track color) {
+              <button type="button"
+                      class="color-option"
+                      [class.selected]="editDepartment()!.color === color"
+                      [style.background]="color"
+                      (click)="selectColorForEdit(color)">
+                @if (editDepartment()!.color === color) {
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white">
+                    <path d="M20 6L9 17l-5-5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                }
+              </button>
+            }
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" (click)="showEditModal.set(false)">Cancelar</button>
+          <button type="submit" class="primary-btn">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

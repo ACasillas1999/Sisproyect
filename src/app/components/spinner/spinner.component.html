@@ -1,0 +1,19 @@
+@if (overlay) {
+  <div class="spinner-overlay">
+    <div class="spinner-wrapper">
+      <div class="spinner" [attr.data-size]="size" [attr.data-color]="color">
+        <div class="spinner-circle"></div>
+      </div>
+      @if (message) {
+        <p class="spinner-message">{{ message }}</p>
+      }
+    </div>
+  </div>
+} @else {
+  <div class="spinner" [attr.data-size]="size" [attr.data-color]="color">
+    <div class="spinner-circle"></div>
+  </div>
+  @if (message) {
+    <p class="spinner-message">{{ message }}</p>
+  }
+}

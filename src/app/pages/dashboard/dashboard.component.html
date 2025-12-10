@@ -4,16 +4,25 @@
   <section class="main">
     <header class="page-header">
       <div>
-        <p class="eyebrow">Dashboard | por departamento</p>
-        <h1>{{ currentDepartment()?.name }} | desempeno de equipo</h1>
-        <p class="muted">Avance calculado por departamento, no por agente.</p>
+        <p class="eyebrow">Métricas del equipo</p>
+        <h1>{{ currentDepartment()?.name }} | Métricas del equipo</h1>
+        <p class="muted">Estadísticas calculadas para {{ currentDepartment()?.name }}</p>
       </div>
       <div class="header-capsule">
-        <span class="label">Departamento activo</span>
-        <div class="pill strong">
-          <span class="dot" [style.background]="currentDepartment()?.color ?? '#22d3ee'"></span>
-          {{ currentDepartment()?.name }}
-        </div>
+        @if (isAdmin()) {
+          <span class="label">Seleccionar Departamento</span>
+          <select class="dept-selector" [(ngModel)]="selectedDepartmentId" (ngModelChange)="selectDepartment($event)">
+            @for (dept of departments(); track dept.id) {
+              <option [value]="dept.id">{{ dept.name }}</option>
+            }
+          </select>
+        } @else {
+          <span class="label">Departamento activo</span>
+          <div class="pill strong">
+            <span class="dot" [style.background]="currentDepartment()?.color ?? '#22d3ee'"></span>
+            {{ currentDepartment()?.name }}
+          </div>
+        }
       </div>
     </header>
 
@@ -38,7 +47,7 @@
       <article class="metric-card">
         <div class="metric-label">Vencidas</div>
         <div class="metric-value alert-text">{{ departmentMetrics().overdue }}</div>
-        <p class="muted">No cuentan tareas cerradas; revisar prioridades</p>
+        <p class="muted">No cuentan tareas cerradas, revisar prioridades</p>
       </article>
       <article class="metric-card">
         <div class="metric-label">Prox. 7 dias</div>
@@ -47,125 +56,128 @@
       </article>
     </section>
 
-    <section class="content-grid">
-      <article class="panel" id="proyectos">
+    <!-- Analytics Section -->
+    <section class="analytics-section">
+      <article class="panel analytics-card">
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Proyectos</p>
-            <h3>Avance por proyecto</h3>
+            <p class="eyebrow">Grafica</p>
+            <h3>Completadas Últimos 7 días</h3>
           </div>
-          <span class="chip">Depto: {{ currentDepartment()?.name }}</span>
         </div>
-
-        <div class="project-list">
-          @for (project of projectSummaries(); track project.id) {
-            <div class="project-card">
-              <div class="project-top">
-                <div>
-                  <div class="project-name">{{ project.name }}</div>
-                  <div class="project-meta">{{ project.description }}</div>
-                </div>
-                <span class="pill soft">{{ project.done }}/{{ project.total }} hechas</span>
-              </div>
-              <div class="project-progress">
-                <div class="progress">
-                  <div
-                    class="progress-bar"
-                    [style.width]="project.progress + '%'"
-                    [style.background]="currentDepartment()?.color ?? '#22d3ee'"
-                  ></div>
-                </div>
-                <div class="project-stats">
-                  <span>{{ project.progress }}%</span>
-                  <span>{{ project.open }} abiertas</span>
-                  <span [class.alert-text]="project.overdue > 0">{{ project.overdue }} vencidas</span>
+        <div class="burndown-chart">
+          @for (day of burndownData(); track day.date) {
+            <div class="chart-bar">
+              <div class="bar-container">
+                <div class="bar" [style.height.%]="getBarHeight(day.completed)" [style.background]="currentDepartment()?.color ?? '#22d3ee'">
+                  @if (day.completed > 0) {
+                    <span class="bar-value">{{ day.completed }}</span>
+                  }
                 </div>
               </div>
+              <div class="bar-label">{{ day.day }}</div>
             </div>
           }
         </div>
+        <p class="muted">Tareas completadas por día en los últimos 7 días</p>
       </article>
 
-      <article class="panel" id="tareas">
+      <article class="panel analytics-card">
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Tareas</p>
-            <h3>Tablero por estado</h3>
+            <p class="eyebrow">Velocidad</p>
+            <h3>Métricas de Productividad</h3>
           </div>
         </div>
+        <div class="velocity-metrics">
+          <div class="velocity-card">
+            <div class="velocity-label">Velocidad (por semana)</div>
+            <div class="velocity-value" [style.color]="currentDepartment()?.color ?? '#22d3ee'">{{ velocity() }} tareas</div>
+            <p class="muted">Promedio de las últimas 2 semanas</p>
+          </div>
+          <div class="velocity-card">
+            <div class="velocity-label">Completadas última semana</div>
+            <div class="velocity-value" [style.color]="currentDepartment()?.color ?? '#22d3ee'">{{ completedTasksLastWeek() }}</div>
+            <p class="muted">Tareas cerradas en los últimos 7 días</p>
+          </div>
+          <div class="velocity-card">
+            <div class="velocity-label">Completadas último mes</div>
+            <div class="velocity-value" [style.color]="currentDepartment()?.color ?? '#22d3ee'">{{ completedTasksLastMonth() }}</div>
+            <p class="muted">Tareas cerradas en los últimos 30 días</p>
+          </div>
+          <div class="velocity-card">
+            <div class="velocity-label">Tiempo promedio</div>
+            <div class="velocity-value" [style.color]="currentDepartment()?.color ?? '#22d3ee'">{{ averageCompletionTime() }} días</div>
+            <p class="muted">Desde creación hasta completado</p>
+          </div>
+        </div>
+      </article>
+    </section>
 
-        <div class="board-grid">
-          <div class="column">
-            <div class="column-header">
-              <span class="dot small pending"></span>
-              <div>Por hacer</div>
-              <span class="pill">{{ boardColumns().pending.length }}</span>
+    <!-- Resumen de Departamento -->
+    <section class="department-summary">
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Resumen de {{ currentDepartment()?.name }}</p>
+            <h3>Vista General</h3>
+          </div>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-icon" [style.background]="currentDepartment()?.color ?? '#22d3ee'">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="22 4 12 14.01 9 11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </div>
-            <div class="column-body">
-              @if (boardColumns().pending.length === 0) {
-                <p class="muted small">Sin tareas pendientes</p>
-              }
-              @for (task of boardColumns().pending; track task.id) {
-                <div class="task-card">
-                  <div class="task-title">{{ task.title }}</div>
-                  <div class="task-meta">
-                    <span class="badge low">Prioridad {{ task.priority }}</span>
-                    <span class="badge ghost">{{ projectName(task.projectId) }}</span>
-                  </div>
-                  <div class="task-due">Vence {{ task.due }}</div>
-                </div>
-              }
+            <div class="summary-content">
+              <div class="summary-label">Total Tareas Completadas</div>
+              <div class="summary-value">{{ departmentMetrics().done }}</div>
+              <div class="summary-detail">De {{ departmentMetrics().total }} tareas totales</div>
             </div>
           </div>
-
-          <div class="column">
-            <div class="column-header">
-              <span class="dot small progress"></span>
-              <div>En progreso</div>
-              <span class="pill">{{ boardColumns().inProgress.length }}</span>
+          <div class="summary-card">
+            <div class="summary-icon warning">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <line x1="12" y1="8" x2="12" y2="12" stroke-width="2" stroke-linecap="round"/>
+                <line x1="12" y1="16" x2="12.01" y2="16" stroke-width="2" stroke-linecap="round"/>
+              </svg>
             </div>
-            <div class="column-body">
-              @if (boardColumns().inProgress.length === 0) {
-                <p class="muted small">Sin tareas en progreso</p>
-              }
-              @for (task of boardColumns().inProgress; track task.id) {
-                <div class="task-card">
-                  <div class="task-title">{{ task.title }}</div>
-                  <div class="task-meta">
-                    <span class="badge mid">Prioridad {{ task.priority }}</span>
-                    <span class="badge ghost">{{ projectName(task.projectId) }}</span>
-                  </div>
-                  <div class="task-due">Vence {{ task.due }}</div>
-                </div>
-              }
+            <div class="summary-content">
+              <div class="summary-label">Tareas Vencidas</div>
+              <div class="summary-value alert-text">{{ departmentMetrics().overdue }}</div>
+              <div class="summary-detail">Requieren atención inmediata</div>
             </div>
           </div>
-
-          <div class="column">
-            <div class="column-header">
-              <span class="dot small done"></span>
-              <div>Completado</div>
-              <span class="pill">{{ boardColumns().done.length }}</span>
+          <div class="summary-card">
+            <div class="summary-icon info">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </div>
-            <div class="column-body">
-              @if (boardColumns().done.length === 0) {
-                <p class="muted small">Aun sin tareas cerradas</p>
-              }
-              @for (task of boardColumns().done; track task.id) {
-                <div class="task-card">
-                  <div class="task-title">{{ task.title }}</div>
-                  <div class="task-meta">
-                    <span class="badge success">Prioridad {{ task.priority }}</span>
-                    <span class="badge ghost">{{ projectName(task.projectId) }}</span>
-                  </div>
-                  <div class="task-due">Cerrada {{ task.due }}</div>
-                </div>
-              }
+            <div class="summary-content">
+              <div class="summary-label">Productividad</div>
+              <div class="summary-value">{{ velocity() }}</div>
+              <div class="summary-detail">Tareas por semana</div>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-icon success">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <polyline points="12 6 12 12 16 14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="summary-content">
+              <div class="summary-label">Tiempo Promedio</div>
+              <div class="summary-value">{{ averageCompletionTime() }}</div>
+              <div class="summary-detail">Días para completar</div>
             </div>
           </div>
         </div>
       </article>
-
     </section>
   </section>
 </main>

@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterModule } from '@angular/router';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
-import { DataService, User } from '../../data.service';
+import { DataService, User, Department } from '../../data.service';
 
 interface UserForm {
   id?: string;
   username: string;
   password: string;
   role: string;
+  departmentId?: string;
   active: boolean;
 }
 
@@ -24,18 +25,27 @@ export class UsersComponent {
   private readonly dataService = inject(DataService);
 
   protected users = signal<User[]>([]);
-  protected form = signal<UserForm>({ username: '', password: '', role: 'usuario', active: true });
+  protected departments = signal<Department[]>([]);
+  protected form = signal<UserForm>({ username: '', password: '', role: 'usuario', departmentId: '', active: true });
   protected message = signal('');
   protected isEditing = signal(false);
   protected showModal = signal(false);
 
   constructor() {
     this.loadUsers();
+    this.loadDepartments();
+  }
+
+  private loadDepartments() {
+    this.dataService.getDepartments().subscribe({
+      next: (departments) => this.departments.set(departments),
+      error: () => this.message.set('Error cargando departamentos'),
+    });
   }
 
   protected startCreate() {
     this.isEditing.set(false);
-    this.form.set({ username: '', password: '', role: 'usuario', active: true });
+    this.form.set({ username: '', password: '', role: 'usuario', departmentId: '', active: true });
     this.message.set('');
     this.showModal.set(true);
   }
@@ -47,6 +57,7 @@ export class UsersComponent {
       username: user.username,
       password: '',
       role: user.role,
+      departmentId: user.departmentId || '',
       active: Boolean(user.active ?? 1),
     });
     this.message.set('');
@@ -66,12 +77,13 @@ export class UsersComponent {
           username: payload.username,
           password: payload.password || undefined,
           role: payload.role,
+          departmentId: payload.departmentId || undefined,
           active: payload.active ? 1 : 0,
         })
         .subscribe({
           next: () => {
             this.message.set('Usuario actualizado');
-            this.startCreate();
+            this.showModal.set(false);
             this.loadUsers();
           },
           error: () => this.message.set('Error actualizando usuario'),
@@ -82,14 +94,14 @@ export class UsersComponent {
           username: payload.username,
           password: payload.password,
           role: payload.role,
+          departmentId: payload.departmentId || undefined,
           active: payload.active ? 1 : 0,
         })
         .subscribe({
           next: () => {
             this.message.set('Usuario creado');
-            this.startCreate();
-            this.loadUsers();
             this.showModal.set(false);
+            this.loadUsers();
           },
           error: () => this.message.set('Error creando usuario'),
         });
@@ -116,5 +128,11 @@ export class UsersComponent {
       next: (users) => this.users.set(users),
       error: () => this.message.set('Error cargando usuarios'),
     });
+  }
+
+  protected getDepartmentName(departmentId?: string): string {
+    if (!departmentId) return 'Sin departamento';
+    const dept = this.departments().find(d => d.id === departmentId);
+    return dept?.name || 'Sin departamento';
   }
 }

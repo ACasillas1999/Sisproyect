@@ -1,0 +1,193 @@
+<div class="layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="main-content">
+    <div class="content-header">
+      <div>
+        <h2>Mis Proyectos</h2>
+        <p class="subtitle">Gestiona todos tus proyectos en un solo lugar</p>
+      </div>
+      <button class="btn-primary" (click)="openCreateModal()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <line x1="12" y1="5" x2="12" y2="19" stroke-width="2" stroke-linecap="round"/>
+          <line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Nuevo Proyecto
+      </button>
+    </div>
+
+    <div class="projects-grid">
+      @if (isLoading()) {
+        <app-spinner [overlay]="true" message="Cargando proyectos..." size="large"></app-spinner>
+      }
+
+      @for (project of paginatedProjects(); track project.id) {
+        <div class="project-card" [routerLink]="['/projects', project.id]"
+             [style.background-image]="project.logo ? 'linear-gradient(rgba(11, 18, 33, 0.7), rgba(11, 18, 33, 0.8)), url(' + getLogoUrl(project.logo) + ')' : null">
+          <div class="project-header-row">
+            <div class="badges-container">
+              <span class="status-badge" [attr.data-status]="project.status || 'development'">
+                {{ getStatusLabel(project.status || 'development') }}
+              </span>
+              @if (project.workspaceId) {
+                @for (workspace of workspaces(); track workspace.id) {
+                  @if (workspace.id === project.workspaceId) {
+                    <span class="workspace-badge" [style.background-color]="workspace.color + '20'" [style.border-color]="workspace.color" [style.color]="workspace.color">
+                      {{ workspace.icon || '📁' }} {{ workspace.name }}
+                    </span>
+                  }
+                }
+              } @else {
+                <span class="workspace-badge no-workspace">
+                  Sin espacio
+                </span>
+              }
+            </div>
+          </div>
+
+          <div class="project-info">
+            <h3>{{ project.name }}</h3>
+            <p class="project-desc">{{ project.description || 'Sin descripción' }}</p>
+            @if (project.start || project.end) {
+              <div class="project-dates">
+                @if (project.start) { <span>Inicio: {{ project.start | date:'mediumDate' }}</span> }
+                @if (project.end) { <span>Fin: {{ project.end | date:'mediumDate' }}</span> }
+              </div>
+            }
+          </div>
+
+          <div class="project-footer">
+            <div class="project-progress">
+              <div class="progress-label">
+                <span>Progreso</span>
+                <span class="progress-value">{{ getProgress(project.id) }}%</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" [style.width.%]="getProgress(project.id)"></div>
+              </div>
+            </div>
+
+            <div class="project-stats">
+              <div class="stat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                </svg>
+                <span>{{ getProjectStats(project.id).total }} tareas</span>
+              </div>
+              <div class="stat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span>{{ getProjectStats(project.id).completed }} completadas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (filteredProjects().length === 0 && !isLoading()) {
+        <div class="empty-state">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/>
+            <line x1="9" y1="9" x2="15" y2="9" stroke-width="2" stroke-linecap="round"/>
+            <line x1="9" y1="15" x2="15" y2="15" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <h3>No hay proyectos</h3>
+          <p>Crea tu primer proyecto para comenzar</p>
+          <button class="btn-ghost" (click)="openCreateModal()">Crear Proyecto</button>
+        </div>
+      }
+    </div>
+
+    <!-- Paginación -->
+    @if (filteredProjects().length > 0 && !isLoading()) {
+      <app-pagination
+        [currentPage]="currentPage()"
+        [totalItems]="filteredProjects().length"
+        [itemsPerPage]="itemsPerPage"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
+    }
+  </div>
+</div>
+
+<!-- Create Modal -->
+@if (showCreateModal()) {
+  <div class="modal-backdrop" (click)="showCreateModal.set(false)">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Nuevo Proyecto</h3>
+        <button class="close-btn" (click)="showCreateModal.set(false)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <form (ngSubmit)="createProject()">
+        <div class="form-field">
+          <label>Nombre del Proyecto *</label>
+          <input type="text" [(ngModel)]="newProject().name" name="name"
+                 placeholder="Ej: Sistema de Ventas" required>
+        </div>
+
+        <div class="form-field">
+          <label>Descripción</label>
+          <textarea [(ngModel)]="newProject().description" name="description"
+                    placeholder="Describe brevemente el proyecto..." rows="3"></textarea>
+        </div>
+
+        <div class="form-field">
+          <label>Estado del Proyecto</label>
+          <select [(ngModel)]="newProject().status" name="status">
+            <option value="development">En Desarrollo</option>
+            <option value="production">Producción</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label>Espacio de Trabajo</label>
+          <select [(ngModel)]="newProject().workspaceId" name="workspaceId">
+            <option value="">Sin espacio</option>
+            @for (workspace of workspaces(); track workspace.id) {
+              <option [value]="workspace.id">{{ workspace.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label>Fecha de Inicio</label>
+            <input type="date" [(ngModel)]="newProject().start" name="start">
+          </div>
+          <div class="form-field">
+            <label>Fecha de Fin</label>
+            <input type="date" [(ngModel)]="newProject().end" name="end">
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label>Logo del Proyecto</label>
+          <input type="file" (change)="onLogoSelected($event)" accept="image/*">
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" (click)="showCreateModal.set(false)" [disabled]="isCreating()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="isCreating()">
+            @if (isCreating()) {
+              <span class="btn-spinner">
+                <app-spinner size="small" color="white"></app-spinner>
+                Creando...
+              </span>
+            } @else {
+              Crear Proyecto
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

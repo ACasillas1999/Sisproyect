@@ -24,6 +24,7 @@
         <div class="users-table">
           <div class="users-header">
             <span>Usuario</span>
+            <span>Departamento</span>
             <span>Rol</span>
             <span>Estatus</span>
             <span>Acciones</span>
@@ -31,6 +32,7 @@
           @for (user of users(); track user.id) {
             <div class="users-row">
               <span>{{ user.username }}</span>
+              <span class="badge ghost">{{ getDepartmentName(user.departmentId) }}</span>
               <span class="badge ghost">{{ user.role }}</span>
               <span class="badge" [class.success]="user.active" [class.alert-text]="!user.active">
                 {{ user.active ? 'Activo' : 'Inactivo' }}
@@ -75,6 +77,15 @@
                   <option value="admin">admin</option>
                   <option value="lider">lider</option>
                   <option value="usuario">usuario</option>
+                </select>
+              </div>
+              <div class="form-control">
+                <label>Departamento</label>
+                <select [(ngModel)]="form().departmentId">
+                  <option value="">Sin departamento</option>
+                  @for (dept of departments(); track dept.id) {
+                    <option [value]="dept.id">{{ dept.name }}</option>
+                  }
                 </select>
               </div>
               <div class="form-control">

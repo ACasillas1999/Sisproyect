@@ -19,7 +19,7 @@ html, body {
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Bitcount Prop Single", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 .primary-btn {
@@ -54,4 +54,25 @@ html, body {
 
 .danger-btn:hover {
   background: rgba(248, 113, 113, 0.2);
+}
+
+/* Spinner en botones */
+.btn-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.primary-btn:disabled,
+.ghost-btn:disabled,
+.danger-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.primary-btn:disabled:hover,
+.ghost-btn:disabled:hover,
+.danger-btn:disabled:hover {
+  transform: none;
 }
