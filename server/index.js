@@ -11,11 +11,11 @@ const fs = require('fs');
 const PORT = process.env.PORT || 3000;
 const ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:4200';
 
-const DB_HOST = process.env.DB_HOST || process.env.MYSQL_HOST || 'localhost';
-const DB_USER = process.env.DB_USER || process.env.MYSQL_USER || 'root';
-const DB_PASSWORD = process.env.DB_PASS || process.env.MYSQL_PASSWORD || '';
-const DB_NAME = process.env.DB_NAME || process.env.MYSQL_DATABASE || 'sisproyect';
-const DB_PORT = Number(process.env.DB_PORT || process.env.MYSQL_PORT || 3306);
+const DB_HOST = process.env.DB_HOST || process.env.MYSQL_HOST;
+const DB_USER = process.env.DB_USER || process.env.MYSQL_USER;
+const DB_PASSWORD = process.env.DB_PASS || process.env.MYSQL_PASSWORD;
+const DB_NAME = process.env.DB_NAME || process.env.MYSQL_DATABASE;
+const DB_PORT = Number(process.env.DB_PORT || process.env.MYSQL_PORT);
 // Use network path since server runs locally but files are on network share
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../public/uploads/docs');
 
@@ -59,7 +59,6 @@ async function main() {
   // CORS configuration - allow multiple origins
   const allowedOrigins = [
     'http://localhost:4200',
-    'http://192.168.60.117:4200',
     'http://127.0.0.1:4200'
   ];
 
