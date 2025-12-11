@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService, SessionUser } from '../../auth.service';
 import { DataService, Department, User, Workspace } from '../../data.service';
+import { SearchBarComponent } from '../search-bar/search-bar.component';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive, SearchBarComponent],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.css',
 })

@@ -61,6 +61,10 @@
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
+.search-section {
+  margin: 0.5rem 0;
+}
+
 .modules {
   display: flex;
   flex-direction: column;

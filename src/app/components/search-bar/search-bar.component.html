@@ -1,0 +1,65 @@
+<div class="search-container">
+  <div class="search-box">
+    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <circle cx="11" cy="11" r="8" stroke-width="2"/>
+      <path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <input
+      type="text"
+      class="search-input"
+      placeholder="Buscar tareas... (Ctrl+K)"
+      [value]="searchQuery()"
+      (input)="onSearchInput($any($event.target).value)"
+      (focus)="showResults.set(searchQuery().trim().length > 0)"
+    />
+    @if (searchQuery()) {
+      <button class="clear-btn" (click)="closeSearch()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+          <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    }
+  </div>
+
+  @if (showResults()) {
+    <div class="search-results">
+      @if (searchResults().length === 0) {
+        <div class="no-results">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" opacity="0.3">
+            <circle cx="11" cy="11" r="8" stroke-width="2"/>
+            <path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <p>No se encontraron tareas</p>
+        </div>
+      } @else {
+        <div class="results-list">
+          @for (task of searchResults(); track task.id) {
+            <div class="result-item" (click)="navigateToTask(task)">
+              <div class="task-header">
+                <span class="task-id">#{{ task.id }}</span>
+                <span class="task-title">{{ task.title }}</span>
+              </div>
+              <div class="task-meta">
+                <span class="task-project">{{ task.projectName }}</span>
+                <span class="task-status" [attr.data-status]="task.status">
+                  {{ getStatusLabel(task.status) }}
+                </span>
+                <span class="task-priority" [attr.data-priority]="task.priority">
+                  {{ getPriorityLabel(task.priority) }}
+                </span>
+              </div>
+              @if (task.description) {
+                <p class="task-description">{{ task.description }}</p>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@if (showResults()) {
+  <div class="search-overlay" (click)="closeSearch()"></div>
+}
