@@ -16,8 +16,8 @@ const DB_USER = process.env.DB_USER || process.env.MYSQL_USER || 'root';
 const DB_PASSWORD = process.env.DB_PASS || process.env.MYSQL_PASSWORD || '';
 const DB_NAME = process.env.DB_NAME || process.env.MYSQL_DATABASE || 'sisproyect';
 const DB_PORT = Number(process.env.DB_PORT || process.env.MYSQL_PORT || 3306);
-// Use network path since server runs locally but files are on network share
-const UPLOAD_DIR = '\\\\192.168.60.117\\xampp\\htdocs\\Sisproyect\\public\\uploads\\docs';
+// Use path relative to server directory
+const UPLOAD_DIR = path.join(__dirname, '../public/uploads/docs');
 console.log('UPLOAD_DIR:', UPLOAD_DIR);
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
