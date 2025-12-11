@@ -1252,6 +1252,14 @@ async function main() {
     }
   });
 
+  // Serve Angular frontend from browser subdirectory
+  app.use(express.static(path.join(__dirname, '../dist/Sisproyect/browser')));
+
+  // Catch-all route to serve index.html for Angular routing
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/Sisproyect/browser/index.html'));
+  });
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`API running on http://localhost:${PORT}`);
     console.log(`Also available at http://192.168.60.117:${PORT}`);
