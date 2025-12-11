@@ -1,0 +1,25 @@
+[Unit]
+Description=Sisproyect API Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Sisproyect/server
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=CORS_ORIGIN=http://107.21.163.64
+Environment=DB_HOST=172.31.16.27
+Environment=DB_USER=root
+Environment=DB_PASSWORD=04nm2fdLefCxM
+Environment=DB_NAME=sisproyect
+Environment=DB_PORT=3306
+Environment=UPLOAD_DIR=/home/ubuntu/Sisproyect/public/uploads/docs
+ExecStart=/home/ubuntu/.nvm/versions/node/v20.11.0/bin/node index.js
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/ubuntu/logs/sisproyect.log
+StandardError=append:/home/ubuntu/logs/sisproyect-error.log
+
+[Install]
+WantedBy=multi-user.target
