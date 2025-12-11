@@ -59,7 +59,7 @@ async function main() {
   // CORS configuration - allow multiple origins
   const allowedOrigins = [
     'http://localhost:4200',
-    'http://192.168.60.117:4200',
+    
     'http://127.0.0.1:4200'
   ];
 
@@ -1253,8 +1253,7 @@ async function main() {
   });
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`API running on http://localhost:${PORT}`);
-    console.log(`Also available at http://192.168.60.117:${PORT}`);
+  
   });
 }
 
