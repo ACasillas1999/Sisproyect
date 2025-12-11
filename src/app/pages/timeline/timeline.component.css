@@ -14,6 +14,121 @@
   color: #e2e8f0;
 }
 
+.content-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+  margin-top: 1rem;
+}
+
+.projects-sidebar {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid #1f2937;
+  border-radius: 16px;
+  padding: 1rem;
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  color: #e2e8f0;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.count-pill {
+  background: rgba(99, 102, 241, 0.15);
+  color: #c7d2fe;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.project-list-item {
+  width: 100%;
+  display: block;
+  text-align: left;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font: inherit;
+  outline: none;
+}
+
+.project-list-item:hover {
+  border-color: #334155;
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.project-list-item.active {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.08);
+  box-shadow: 0 10px 25px -12px rgba(99, 102, 241, 0.35);
+}
+
+.project-list-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.project-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot[data-status="production"] {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.status-dot[data-status="development"] {
+  background: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+
+.versions-count {
+  font-weight: 600;
+}
+
+.timeline-area {
+  width: 100%;
+}
+
 .header h1 {
   margin: 0;
   font-size: 2rem;
@@ -346,4 +461,15 @@
   padding: 3rem;
   text-align: center;
   color: #94a3b8;
+}
+
+@media (max-width: 1024px) {
+  .content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .projects-sidebar {
+    position: static;
+    max-height: none;
+  }
 }

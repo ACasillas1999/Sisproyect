@@ -45,6 +45,18 @@ export class TimelineComponent {
     return Array.from(groups.values());
   });
 
+  protected readonly selectedProjectId = signal<string | null>(null);
+
+  protected readonly selectedProjectGroup = computed(() => {
+    const groups = this.projectGroups();
+    if (groups.length === 0) {
+      return null;
+    }
+
+    const selected = groups.find((g) => g.projectId === this.selectedProjectId());
+    return selected ?? groups[0];
+  });
+
   protected showDetailsModal = signal(false);
   protected selectedVersionDetails = signal<any>(null);
 
@@ -55,6 +67,21 @@ export class TimelineComponent {
       this.loadVersions();
       this.loadUsers();
       this.loadWorkspaces();
+    });
+
+    effect(() => {
+      const groups = this.projectGroups();
+      const current = this.selectedProjectId();
+
+      if (groups.length === 0) {
+        this.selectedProjectId.set(null);
+        return;
+      }
+
+      const isCurrentValid = current && groups.some((g) => g.projectId === current);
+      if (!isCurrentValid) {
+        this.selectedProjectId.set(groups[0].projectId);
+      }
     });
   }
 
@@ -80,6 +107,10 @@ export class TimelineComponent {
     return this.users().get(userId) || 'Usuario';
   }
 
+  protected selectProject(projectId: string) {
+    this.selectedProjectId.set(projectId);
+  }
+
   private loadVersions() {
     this.dataService.getAllVersions().subscribe({
       next: (versions) => this.versions.set(versions),
@@ -95,7 +126,7 @@ export class TimelineComponent {
       next: (details) => this.selectedVersionDetails.set(details),
       error: (err) => {
         console.error('Error loading version details', err);
-        alert('Error cargando detalles de la versión');
+        alert('Error cargando detalles de la version');
         this.showDetailsModal.set(false);
       }
     });

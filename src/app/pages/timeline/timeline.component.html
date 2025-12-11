@@ -2,7 +2,7 @@
   <app-sidebar></app-sidebar>
   <div class="main-content">
     <div class="header">
-      <h1>Línea de tiempo de versiones</h1>
+      <h1>Linea de tiempo de versiones</h1>
       <p class="muted">Versiones de todos los proyectos, ordenadas por fecha</p>
     </div>
 
@@ -11,54 +11,82 @@
         <p>No hay versiones registradas</p>
       </div>
     } @else {
-      <div class="projects-container">
-        @for (group of projectGroups(); track group.projectId) {
-          <div class="project-group">
-            <div class="project-header-row">
-              <h2>{{ group.projectName }}</h2>
-              <div class="badges">
-                <span class="status-pill" [attr.data-status]="group.projectStatus || 'development'">
-                  {{ group.projectStatus === 'production' ? 'Producción' : 'Desarrollo' }}
-                </span>
-                @if (group.workspaceId) {
-                  @for (workspace of workspaces(); track workspace.id) {
-                    @if (workspace.id === group.workspaceId) {
-                      <span class="workspace-badge" [style.background-color]="workspace.color + '20'" [style.border-color]="workspace.color" [style.color]="workspace.color">
-                        {{ workspace.icon || '📁' }} {{ workspace.name }}
-                      </span>
+      <div class="content-layout">
+        <aside class="projects-sidebar">
+          <div class="sidebar-header">
+            <h3>Proyectos</h3>
+            <span class="count-pill">{{ projectGroups().length }}</span>
+          </div>
+          <div class="project-list">
+            @for (group of projectGroups(); track group.projectId) {
+              <button
+                class="project-list-item"
+                type="button"
+                [class.active]="selectedProjectId() === group.projectId"
+                (click)="selectProject(group.projectId)">
+                <div class="project-list-title">{{ group.projectName }}</div>
+                <div class="project-list-meta">
+                  <span class="status-dot" [attr.data-status]="group.projectStatus || 'development'"></span>
+                  <span class="versions-count">{{ group.versions.length }} versiones</span>
+                </div>
+              </button>
+            }
+          </div>
+        </aside>
+
+        <div class="timeline-area">
+          @if (selectedProjectGroup(); as selectedGroup) {
+            <div class="project-group">
+              <div class="project-header-row">
+                <h2>{{ selectedGroup.projectName }}</h2>
+                <div class="badges">
+                  <span class="status-pill" [attr.data-status]="selectedGroup.projectStatus || 'development'">
+                    {{ selectedGroup.projectStatus === 'production' ? 'Produccion' : 'Desarrollo' }}
+                  </span>
+                  @if (selectedGroup.workspaceId) {
+                    @for (workspace of workspaces(); track workspace.id) {
+                      @if (workspace.id === selectedGroup.workspaceId) {
+                        <span class="workspace-badge" [style.background-color]="workspace.color + '20'" [style.border-color]="workspace.color" [style.color]="workspace.color">
+                          {{ workspace.icon || '♦' }} {{ workspace.name }}
+                        </span>
+                      }
                     }
                   }
-                }
+                </div>
               </div>
-            </div>
 
-            <div class="timeline">
-              @for (version of group.versions; track version.id) {
-                <div class="timeline-item">
-                  <div class="time-col">
-                    <span class="date">{{ version.createdAt | date:'mediumDate' }}</span>
-                    <span class="time">{{ version.createdAt | date:'shortTime' }}</span>
-                  </div>
-                  <div class="line-col">
-                    <div class="dot"></div>
-                    <div class="line"></div>
-                  </div>
-                  <div class="content-col">
-                    <div class="card">
-                      <div class="card-header">
-                        <p class="version-name">{{ version.versionName }}</p>
-                      </div>
-                      <div class="meta">
-                        <span>Por: {{ version.createdBy || 'Desconocido' }}</span>
-                        <button class="details-link" (click)="openVersionDetails(version.id)">Ver contenido</button>
+              <div class="timeline">
+                @for (version of selectedGroup.versions; track version.id) {
+                  <div class="timeline-item">
+                    <div class="time-col">
+                      <span class="date">{{ version.createdAt | date:'mediumDate' }}</span>
+                      <span class="time">{{ version.createdAt | date:'shortTime' }}</span>
+                    </div>
+                    <div class="line-col">
+                      <div class="dot"></div>
+                      <div class="line"></div>
+                    </div>
+                    <div class="content-col">
+                      <div class="card">
+                        <div class="card-header">
+                          <p class="version-name">{{ version.versionName }}</p>
+                        </div>
+                        <div class="meta">
+                          <span>Por: {{ version.createdBy || 'Desconocido' }}</span>
+                          <button class="details-link" (click)="openVersionDetails(version.id)">Ver contenido</button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              }
+                }
+              </div>
             </div>
-          </div>
-        }
+          } @else {
+            <div class="empty-state">
+              <p>Selecciona un proyecto para ver su linea de tiempo</p>
+            </div>
+          }
+        </div>
       </div>
     }
   </div>
@@ -67,7 +95,7 @@
     <div class="modal-backdrop" (click)="closeDetailsModal()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h2>Detalles de la Versión</h2>
+          <h2>Detalles de la Version</h2>
           <button class="close-btn" (click)="closeDetailsModal()">&times;</button>
         </div>
         
@@ -91,7 +119,7 @@
                   }
                 </ul>
               } @else {
-                <p class="empty-text">No hay tareas registradas en esta versión.</p>
+                <p class="empty-text">No hay tareas registradas en esta version.</p>
               }
             </div>
 
