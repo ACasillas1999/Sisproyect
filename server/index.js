@@ -858,6 +858,66 @@ async function main() {
     }
   });
 
+  // Project comments
+  app.get('/api/projects/:id/comments', async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [rows] = await pool.query(
+        `SELECT
+          pc.id,
+          pc.project_id AS projectId,
+          pc.user_id AS userId,
+          COALESCE(pc.author, u.username) AS author,
+          pc.message,
+          pc.created_at AS createdAt
+        FROM project_comments pc
+        LEFT JOIN users u ON u.id = pc.user_id
+        WHERE pc.project_id = ?
+        ORDER BY pc.created_at ASC`,
+        [id]
+      );
+      res.json(rows);
+    } catch (err) {
+      console.error('Error loading project comments', err);
+      res.status(500).json({ message: 'Error loading project comments' });
+    }
+  });
+
+  app.post('/api/projects/:id/comments', async (req, res) => {
+    const { id: projectId } = req.params;
+    const { userId, message } = req.body;
+
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ message: 'El comentario es requerido' });
+    }
+
+    try {
+      let author = null;
+      if (userId) {
+        const [users] = await pool.query('SELECT username FROM users WHERE id = ?', [userId]);
+        author = users[0]?.username || null;
+      }
+
+      const commentId = crypto.randomUUID();
+      await pool.query(
+        'INSERT INTO project_comments (id, project_id, user_id, author, message) VALUES (?, ?, ?, ?, ?)',
+        [commentId, projectId, userId || null, author, message]
+      );
+
+      res.status(201).json({
+        id: commentId,
+        projectId,
+        userId: userId || null,
+        author,
+        message,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Error creating project comment', err);
+      res.status(500).json({ message: 'Error creando comentario de proyecto' });
+    }
+  });
+
   // Project versions
   app.get('/api/projects/:id/versions', async (req, res) => {
     try {
@@ -1365,6 +1425,19 @@ async function initTables(pool) {
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
       FOREIGN KEY (version_id) REFERENCES project_versions(id) ON DELETE SET NULL,
       FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS project_comments (
+      id CHAR(36) PRIMARY KEY,
+      project_id CHAR(36) NOT NULL,
+      user_id CHAR(36),
+      author VARCHAR(120),
+      message TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     )
   `);
 
