@@ -5,13 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { SpinnerComponent } from '../../components/spinner/spinner.component';
 import { PaginationComponent } from '../../components/pagination/pagination.component';
-import { DataService, Project, Workspace } from '../../data.service';
+import { DataService, Project, Workspace, ProjectComment } from '../../data.service';
 import { AuthService } from '../../auth.service';
 import { environment } from '../../../environments/environment';
+import { ProjectCommentsPanelComponent } from '../../components/project-comments-panel/project-comments-panel.component';
 
-type ProjectComment = {
-  id: string;
-  projectId: string;
+type ProjectCommentView = ProjectComment & {
   author: string;
   message: string;
   createdAt: string;
@@ -20,7 +19,7 @@ type ProjectComment = {
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, SidebarComponent, SpinnerComponent, PaginationComponent],
+  imports: [CommonModule, RouterLink, FormsModule, SidebarComponent, SpinnerComponent, PaginationComponent, ProjectCommentsPanelComponent],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.css',
 })
@@ -42,7 +41,9 @@ export class ProjectsComponent {
   protected readonly isCommentsPanelOpen = signal(false);
   protected readonly activeProjectForComments = signal<Project | null>(null);
   protected readonly commentDraft = signal('');
-  protected readonly commentsByProject = signal<Record<string, ProjectComment[]>>({});
+  protected readonly commentsByProject = signal<Record<string, ProjectCommentView[]>>({});
+  protected readonly commentsLoading = signal(false);
+  protected readonly isSavingComment = signal(false);
 
   protected readonly activeComments = computed(() => {
     const project = this.activeProjectForComments();
@@ -258,10 +259,11 @@ export class ProjectsComponent {
     event?.stopPropagation();
 
     this.activeProjectForComments.set(project);
-    this.commentsByProject.update((current) => {
-      if (current[project.id]) return current;
-      return { ...current, [project.id]: [] };
-    });
+    this.commentDraft.set('');
+    const existing = this.commentsByProject()[project.id];
+    if (existing === undefined) {
+      this.loadProjectComments(project.id);
+    }
     this.isCommentsPanelOpen.set(true);
   }
 
@@ -275,23 +277,48 @@ export class ProjectsComponent {
     const message = this.commentDraft().trim();
     if (!project || !message) return;
 
-    const author = this.auth.user?.username || 'Anónimo';
-    const newComment: ProjectComment = {
-      id: `comment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      projectId: project.id,
-      author,
-      message,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.commentsByProject.update((current) => {
-      const existing = current[project.id] || [];
-      return {
-        ...current,
-        [project.id]: [...existing, newComment],
-      };
+    const userId = this.auth.user?.id;
+    this.isSavingComment.set(true);
+    this.dataService.createProjectComment(project.id, { userId, message }).subscribe({
+      next: (saved) => {
+        const normalized = this.normalizeProjectComment(saved, message);
+        this.commentsByProject.update((current) => {
+          const existing = current[project.id] || [];
+          return {
+            ...current,
+            [project.id]: [...existing, normalized],
+          };
+        });
+        this.commentDraft.set('');
+      },
+      error: (err) => console.error('Error guardando comentario del proyecto', err),
+      complete: () => this.isSavingComment.set(false),
     });
+  }
 
-    this.commentDraft.set('');
+  private loadProjectComments(projectId: string) {
+    this.commentsLoading.set(true);
+    this.dataService.getProjectComments(projectId).subscribe({
+      next: (comments) => {
+        const normalized = comments.map((c) => this.normalizeProjectComment(c, c.message));
+        this.commentsByProject.update((current) => ({
+          ...current,
+          [projectId]: normalized,
+        }));
+      },
+      error: (err) => console.error('Error cargando comentarios del proyecto', err),
+      complete: () => this.commentsLoading.set(false),
+    });
+  }
+
+  private normalizeProjectComment(comment: ProjectComment, fallbackMessage: string): ProjectCommentView {
+    return {
+      id: comment.id,
+      projectId: comment.projectId,
+      userId: comment.userId,
+      author: comment.author || this.auth.user?.username || 'Anónimo',
+      message: (comment as any).message ?? (comment as any).comment ?? fallbackMessage,
+      createdAt: comment.createdAt || new Date().toISOString(),
+    };
   }
 }

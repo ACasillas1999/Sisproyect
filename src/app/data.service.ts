@@ -131,6 +131,15 @@ export interface TaskDocument {
   createdAt: string;
 }
 
+export interface ProjectComment {
+  id: string;
+  projectId: string;
+  userId?: string;
+  author?: string;
+  message: string;
+  createdAt: string;
+}
+
 export interface VersionSummary {
   id: string;
   projectId: string;
@@ -197,6 +206,15 @@ export class DataService {
 
   uploadProjectDocument(projectId: string, formData: FormData): Observable<ProjectDocument> {
     return this.http.post<ProjectDocument>(`${this.apiUrl}/projects/${projectId}/documents`, formData);
+  }
+
+  // Project Comments
+  getProjectComments(projectId: string): Observable<ProjectComment[]> {
+    return this.http.get<ProjectComment[]>(`${this.apiUrl}/projects/${projectId}/comments`);
+  }
+
+  createProjectComment(projectId: string, payload: { userId?: string; message: string }): Observable<ProjectComment> {
+    return this.http.post<ProjectComment>(`${this.apiUrl}/projects/${projectId}/comments`, payload);
   }
 
   // Task Comments

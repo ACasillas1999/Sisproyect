@@ -26,6 +26,12 @@
             </svg>
             Historial de Versiones
           </button>
+          <button class="action-btn" (click)="openProjectCommentsPanel()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Comentarios
+          </button>
           @if (canManageProject()) {
             <button class="primary-btn" (click)="openCreateVersionModal()">
               Guardar Versión
@@ -245,6 +251,18 @@
         </div>
       }
     </div>
+
+    <app-project-comments-panel
+      [open]="isProjectCommentsPanelOpen()"
+      [project]="project()"
+      [comments]="projectComments()"
+      [loading]="projectCommentsLoading()"
+      [saving]="isSavingProjectComment()"
+      [draft]="projectCommentDraft()"
+      (closed)="closeProjectCommentsPanel()"
+      (draftChange)="projectCommentDraft.set($event)"
+      (submit)="addProjectComment()">
+    </app-project-comments-panel>
   </div>
 </div>
 

@@ -16,16 +16,18 @@ import {
   ProjectDocument,
   ProjectVersion,
   Workspace,
+  ProjectComment,
 } from '../../data.service';
 
 import { SpinnerComponent } from '../../components/spinner/spinner.component';
 import { PaginationComponent } from '../../components/pagination/pagination.component';
 import { FilePreviewComponent } from '../../components/file-preview/file-preview.component';
+import { ProjectCommentsPanelComponent } from '../../components/project-comments-panel/project-comments-panel.component';
 
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, SidebarComponent, SpinnerComponent, PaginationComponent, FilePreviewComponent],
+  imports: [CommonModule, FormsModule, RouterLink, SidebarComponent, SpinnerComponent, PaginationComponent, FilePreviewComponent, ProjectCommentsPanelComponent],
   templateUrl: './project-detail.component.html',
   styleUrl: './project-detail.component.css',
 })
@@ -59,6 +61,11 @@ export class ProjectDetailComponent {
   protected readonly hideCompletedTasks = signal(false);
   protected readonly activeTaskTab = signal<'comments' | 'documents'>('comments');
   protected readonly selectedVersionFilter = signal<string | null>(null);
+  protected readonly isProjectCommentsPanelOpen = signal(false);
+  protected readonly projectComments = signal<ProjectComment[]>([]);
+  protected readonly projectCommentsLoading = signal(false);
+  protected readonly projectCommentDraft = signal('');
+  protected readonly isSavingProjectComment = signal(false);
 
   // Loading states
   protected readonly isLoadingProject = signal(false);
@@ -550,6 +557,61 @@ export class ProjectDetailComponent {
       },
       error: (err) => console.error('Error adding comment', err)
     });
+  }
+
+  protected openProjectCommentsPanel() {
+    const project = this.project();
+    if (!project) return;
+    this.isProjectCommentsPanelOpen.set(true);
+    if (this.projectComments().length === 0 && !this.projectCommentsLoading()) {
+      this.loadProjectComments(project.id);
+    }
+  }
+
+  protected closeProjectCommentsPanel() {
+    this.isProjectCommentsPanelOpen.set(false);
+    this.projectCommentDraft.set('');
+  }
+
+  private loadProjectComments(projectId: string) {
+    this.projectCommentsLoading.set(true);
+    this.dataService.getProjectComments(projectId).subscribe({
+      next: (comments) => this.projectComments.set(comments),
+      error: (err) => console.error('Error loading project comments', err),
+      complete: () => this.projectCommentsLoading.set(false),
+    });
+  }
+
+  protected addProjectComment() {
+    const project = this.project();
+    const message = this.projectCommentDraft().trim();
+    if (!project || !message) return;
+
+    const payload: { userId?: string; message: string } = { message };
+    const userId = this.auth.user?.id;
+    if (userId) payload.userId = userId;
+
+    this.isSavingProjectComment.set(true);
+    this.dataService.createProjectComment(project.id, payload).subscribe({
+      next: (comment) => {
+        const normalized = this.normalizeProjectComment(comment, message);
+        this.projectComments.update((current) => [...current, normalized]);
+        this.projectCommentDraft.set('');
+      },
+      error: (err) => console.error('Error adding project comment', err),
+      complete: () => this.isSavingProjectComment.set(false),
+    });
+  }
+
+  private normalizeProjectComment(comment: ProjectComment, fallbackMessage: string): ProjectComment {
+    return {
+      id: comment.id,
+      projectId: comment.projectId,
+      userId: comment.userId,
+      author: comment.author || this.auth.user?.username || 'Anónimo',
+      message: (comment as any).message ?? (comment as any).comment ?? fallbackMessage,
+      createdAt: comment.createdAt || new Date().toISOString(),
+    };
   }
 
   protected readonly newTaskDocument = signal<{

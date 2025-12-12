@@ -1,0 +1,70 @@
+<div class="comments-overlay" [class.show]="open" (click)="closed.emit()"></div>
+
+<aside class="comments-panel" [class.open]="open">
+  <div class="comments-panel__header">
+    <div>
+      <p class="panel-eyebrow">Comentarios</p>
+      <h4>{{ project?.name || 'Selecciona un proyecto' }}</h4>
+      @if (project) {
+        <p class="panel-subtitle">Proyecto #{{ project.id }}</p>
+      }
+    </div>
+    <button class="close-btn" type="button" (click)="closed.emit()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+        <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  @if (project) {
+    <div class="comments-body">
+      <div class="comments-list">
+        @if (loading) {
+          <div class="empty-comments">
+            <p>Cargando comentarios...</p>
+          </div>
+        } @else if (comments.length === 0) {
+          <div class="empty-comments">
+            <p>Aún no hay comentarios para este proyecto.</p>
+            <span>Comparte la primera actualización.</span>
+          </div>
+        } @else {
+          @for (comment of comments; track comment.id) {
+            <div class="comment-item">
+              <div class="comment-meta">
+                <span class="author">{{ comment.author || 'Anónimo' }}</span>
+                <span class="date">{{ comment.createdAt | date:'short' }}</span>
+              </div>
+              <p class="comment-text">{{ comment.message }}</p>
+            </div>
+          }
+        }
+      </div>
+
+      <form class="comment-form" (ngSubmit)="submit.emit()">
+        <label for="commentDraft">Nuevo comentario</label>
+        <textarea
+          id="commentDraft"
+          name="commentDraft"
+          rows="3"
+          [ngModel]="draft"
+          (ngModelChange)="draftChange.emit($event)"
+          placeholder="Comparte una actualización o una duda..."
+          required></textarea>
+        <button class="btn-primary" type="submit" [disabled]="!draft.trim() || saving">
+          @if (saving) {
+            Guardando...
+          } @else {
+            Guardar comentario
+          }
+        </button>
+      </form>
+    </div>
+  } @else {
+    <div class="comments-empty-state">
+      <h5>Selecciona un proyecto</h5>
+      <p>Elige un proyecto para ver y agregar comentarios.</p>
+    </div>
+  }
+</aside>
