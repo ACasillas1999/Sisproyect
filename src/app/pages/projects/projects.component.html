@@ -117,6 +117,15 @@
               </div>
             </div>
           </div>
+
+          <div class="card-actions">
+            <button class="btn-comments" type="button" (click)="openCommentsPanel(project, $event)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Comentarios
+            </button>
+          </div>
         </div>
       }
 
@@ -143,6 +152,69 @@
         (pageChange)="onPageChange($event)">
       </app-pagination>
     }
+
+    <div class="comments-overlay" [class.show]="isCommentsPanelOpen()" (click)="closeCommentsPanel()"></div>
+
+    <aside class="comments-panel" [class.open]="isCommentsPanelOpen()">
+      <div class="comments-panel__header">
+        <div>
+          <p class="panel-eyebrow">Comentarios</p>
+          <h4>{{ activeProjectForComments()?.name || 'Selecciona un proyecto' }}</h4>
+          @if (activeProjectForComments()) {
+            <p class="panel-subtitle">Proyecto #{{ activeProjectForComments()?.id }}</p>
+          }
+        </div>
+        <button class="close-btn" type="button" (click)="closeCommentsPanel()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      @if (activeProjectForComments()) {
+        <div class="comments-body">
+          <div class="comments-list">
+            @if (activeComments().length === 0) {
+              <div class="empty-comments">
+                <p>Aún no hay comentarios para este proyecto.</p>
+                <span>Comparte la primera actualización.</span>
+              </div>
+            } @else {
+              @for (comment of activeComments(); track comment.id) {
+                <div class="comment-item">
+                  <div class="comment-meta">
+                    <span class="author">{{ comment.author }}</span>
+                    <span class="date">{{ comment.createdAt | date:'short' }}</span>
+                  </div>
+                  <p class="comment-text">{{ comment.message }}</p>
+                </div>
+              }
+            }
+          </div>
+
+          <form class="comment-form" (ngSubmit)="addComment()">
+            <label for="commentDraft">Nuevo comentario</label>
+            <textarea
+              id="commentDraft"
+              name="commentDraft"
+              rows="3"
+              [ngModel]="commentDraft()"
+              (ngModelChange)="commentDraft.set($event)"
+              placeholder="Comparte una actualización o una duda..."
+              required></textarea>
+            <button class="btn-primary" type="submit" [disabled]="!commentDraft().trim()">
+              Guardar comentario
+            </button>
+          </form>
+        </div>
+      } @else {
+        <div class="comments-empty-state">
+          <h5>Selecciona un proyecto</h5>
+          <p>Elige un proyecto en la lista para ver y agregar comentarios.</p>
+        </div>
+      }
+    </aside>
   </div>
 </div>
 

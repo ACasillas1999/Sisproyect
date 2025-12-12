@@ -9,6 +9,14 @@ import { DataService, Project, Workspace } from '../../data.service';
 import { AuthService } from '../../auth.service';
 import { environment } from '../../../environments/environment';
 
+type ProjectComment = {
+  id: string;
+  projectId: string;
+  author: string;
+  message: string;
+  createdAt: string;
+};
+
 @Component({
   selector: 'app-projects',
   standalone: true,
@@ -31,6 +39,16 @@ export class ProjectsComponent {
   protected readonly searchQuery = signal<string>('');
   protected readonly isLoading = signal(false);
   protected readonly isCreating = signal(false);
+  protected readonly isCommentsPanelOpen = signal(false);
+  protected readonly activeProjectForComments = signal<Project | null>(null);
+  protected readonly commentDraft = signal('');
+  protected readonly commentsByProject = signal<Record<string, ProjectComment[]>>({});
+
+  protected readonly activeComments = computed(() => {
+    const project = this.activeProjectForComments();
+    if (!project) return [];
+    return this.commentsByProject()[project.id] || [];
+  });
 
   // Paginación
   protected readonly currentPage = signal(1);
@@ -233,5 +251,47 @@ export class ProjectsComponent {
       production: 'Producción',
     };
     return labels[status] || status;
+  }
+
+  protected openCommentsPanel(project: Project, event?: Event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    this.activeProjectForComments.set(project);
+    this.commentsByProject.update((current) => {
+      if (current[project.id]) return current;
+      return { ...current, [project.id]: [] };
+    });
+    this.isCommentsPanelOpen.set(true);
+  }
+
+  protected closeCommentsPanel() {
+    this.isCommentsPanelOpen.set(false);
+    this.commentDraft.set('');
+  }
+
+  protected addComment() {
+    const project = this.activeProjectForComments();
+    const message = this.commentDraft().trim();
+    if (!project || !message) return;
+
+    const author = this.auth.user?.username || 'Anónimo';
+    const newComment: ProjectComment = {
+      id: `comment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      projectId: project.id,
+      author,
+      message,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.commentsByProject.update((current) => {
+      const existing = current[project.id] || [];
+      return {
+        ...current,
+        [project.id]: [...existing, newComment],
+      };
+    });
+
+    this.commentDraft.set('');
   }
 }
