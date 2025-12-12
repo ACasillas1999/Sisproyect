@@ -293,7 +293,7 @@ export class ProjectsComponent {
     this.commentsLoading.set(true);
     this.dataService.getProjectComments(projectId).subscribe({
       next: (comments) => {
-        const normalized = comments.map((c) => this.normalizeProjectComment(c, c.message));
+        const normalized = this.dedupeComments(comments.map((c) => this.normalizeProjectComment(c, c.message)));
         this.commentsByProject.update((current) => ({
           ...current,
           [projectId]: normalized,
@@ -313,5 +313,15 @@ export class ProjectsComponent {
       message: (comment as any).message ?? (comment as any).comment ?? fallbackMessage,
       createdAt: comment.createdAt || new Date().toISOString(),
     };
+  }
+
+  private dedupeComments(comments: ProjectCommentView[]): ProjectCommentView[] {
+    const seen = new Map<string, ProjectCommentView>();
+    for (const c of comments) {
+      if (!seen.has(c.id)) {
+        seen.set(c.id, c);
+      }
+    }
+    return Array.from(seen.values());
   }
 }

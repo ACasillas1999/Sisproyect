@@ -577,7 +577,7 @@ export class ProjectDetailComponent {
   private loadProjectComments(projectId: string) {
     this.projectCommentsLoading.set(true);
     this.dataService.getProjectComments(projectId).subscribe({
-      next: (comments) => this.projectComments.set(comments),
+      next: (comments) => this.projectComments.set(this.dedupeComments(comments.map(c => this.normalizeProjectComment(c, c.message)))),
       error: (err) => console.error('Error loading project comments', err),
       complete: () => this.projectCommentsLoading.set(false),
     });
@@ -612,6 +612,16 @@ export class ProjectDetailComponent {
       message: (comment as any).message ?? (comment as any).comment ?? fallbackMessage,
       createdAt: comment.createdAt || new Date().toISOString(),
     };
+  }
+
+  private dedupeComments(comments: ProjectComment[]): ProjectComment[] {
+    const seen = new Map<string, ProjectComment>();
+    for (const c of comments) {
+      if (!seen.has(c.id)) {
+        seen.set(c.id, c);
+      }
+    }
+    return Array.from(seen.values());
   }
 
   protected readonly newTaskDocument = signal<{
