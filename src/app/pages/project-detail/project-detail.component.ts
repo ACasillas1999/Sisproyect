@@ -617,8 +617,9 @@ export class ProjectDetailComponent {
   private dedupeComments(comments: ProjectComment[]): ProjectComment[] {
     const seen = new Map<string, ProjectComment>();
     for (const c of comments) {
-      if (!seen.has(c.id)) {
-        seen.set(c.id, c);
+      const key = c.id || `${c.projectId}|${c.author}|${c.message}|${c.createdAt}`;
+      if (!seen.has(key)) {
+        seen.set(key, c);
       }
     }
     return Array.from(seen.values());

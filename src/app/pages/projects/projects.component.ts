@@ -320,8 +320,9 @@ export class ProjectsComponent {
   private dedupeComments(comments: ProjectCommentView[]): ProjectCommentView[] {
     const seen = new Map<string, ProjectCommentView>();
     for (const c of comments) {
-      if (!seen.has(c.id)) {
-        seen.set(c.id, c);
+      const key = c.id || `${c.projectId}|${c.author}|${c.message}|${c.createdAt}`;
+      if (!seen.has(key)) {
+        seen.set(key, c);
       }
     }
     return Array.from(seen.values());
