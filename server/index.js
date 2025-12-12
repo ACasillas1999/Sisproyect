@@ -892,6 +892,35 @@ async function main() {
     }
 
     try {
+      const trimmedMessage = message.trim();
+      // Evitar duplicados inmediatos (doble submit)
+      const [lastComments] = await pool.query(
+        `SELECT id, user_id AS userId, message, created_at AS createdAt
+         FROM project_comments
+         WHERE project_id = ?
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [projectId]
+      );
+
+      if (lastComments.length > 0) {
+        const last = lastComments[0];
+        const lastCreated = new Date(last.createdAt).getTime();
+        const now = Date.now();
+        const isSameUser = (last.userId || null) === (userId || null);
+        const isSameMessage = (last.message || '').trim() === trimmedMessage;
+        if (isSameUser && isSameMessage && now - lastCreated < 2000) {
+          return res.status(201).json({
+            id: last.id,
+            projectId,
+            userId: last.userId || null,
+            author: null,
+            message: last.message,
+            createdAt: last.createdAt,
+          });
+        }
+      }
+
       let author = null;
       if (userId) {
         const [users] = await pool.query('SELECT username FROM users WHERE id = ?', [userId]);
@@ -901,7 +930,7 @@ async function main() {
       const commentId = crypto.randomUUID();
       await pool.query(
         'INSERT INTO project_comments (id, project_id, user_id, author, message) VALUES (?, ?, ?, ?, ?)',
-        [commentId, projectId, userId || null, author, message]
+        [commentId, projectId, userId || null, author, trimmedMessage]
       );
 
       res.status(201).json({
@@ -909,7 +938,7 @@ async function main() {
         projectId,
         userId: userId || null,
         author,
-        message,
+        message: trimmedMessage,
         createdAt: new Date().toISOString(),
       });
     } catch (err) {
