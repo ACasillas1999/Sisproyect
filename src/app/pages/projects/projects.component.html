@@ -16,6 +16,41 @@
       </button>
     </div>
 
+    <!-- Filtros y Búsqueda -->
+    <div class="filters-container">
+      <div class="search-box">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="11" cy="11" r="8" stroke-width="2"/>
+          <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input
+          type="text"
+          placeholder="Buscar proyectos..."
+          [value]="searchQuery()"
+          (input)="onSearchChange($any($event.target).value)"
+        >
+      </div>
+
+      <div class="filter-group">
+        <label>Estado:</label>
+        <select [value]="selectedStatus() || 'all'" (change)="onStatusChange($any($event.target).value)">
+          <option value="all">Todos</option>
+          <option value="development">En Desarrollo</option>
+          <option value="production">Producción</option>
+        </select>
+      </div>
+
+      @if (selectedStatus() || searchQuery()) {
+        <button class="btn-clear-filters" (click)="clearFilters()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Limpiar filtros
+        </button>
+      }
+    </div>
+
     <div class="projects-grid">
       @if (isLoading()) {
         <app-spinner [overlay]="true" message="Cargando proyectos..." size="large"></app-spinner>

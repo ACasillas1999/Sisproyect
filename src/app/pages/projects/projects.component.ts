@@ -27,6 +27,8 @@ export class ProjectsComponent {
   protected readonly showCreateModal = signal(false);
   protected readonly workspaces = signal<Workspace[]>([]);
   protected readonly selectedWorkspaceId = signal<string | null>(null);
+  protected readonly selectedStatus = signal<string | null>(null);
+  protected readonly searchQuery = signal<string>('');
   protected readonly isLoading = signal(false);
   protected readonly isCreating = signal(false);
 
@@ -71,16 +73,48 @@ export class ProjectsComponent {
 
   private filterProjects() {
     const workspaceId = this.selectedWorkspaceId();
-    const allProjects = this.projects();
+    const status = this.selectedStatus();
+    const query = this.searchQuery().toLowerCase().trim();
+    let filtered = this.projects();
 
-    if (!workspaceId) {
-      this.filteredProjects.set(allProjects);
-    } else {
-      this.filteredProjects.set(allProjects.filter(p => p.workspaceId === workspaceId));
+    // Filtrar por workspace
+    if (workspaceId) {
+      filtered = filtered.filter(p => p.workspaceId === workspaceId);
     }
+
+    // Filtrar por estado
+    if (status) {
+      filtered = filtered.filter(p => p.status === status);
+    }
+
+    // Filtrar por búsqueda (nombre y descripción)
+    if (query) {
+      filtered = filtered.filter(p =>
+        p.name.toLowerCase().includes(query) ||
+        (p.description && p.description.toLowerCase().includes(query))
+      );
+    }
+
+    this.filteredProjects.set(filtered);
 
     // Reset a la primera página cuando se filtra
     this.currentPage.set(1);
+  }
+
+  protected onStatusChange(status: string) {
+    this.selectedStatus.set(status === 'all' ? null : status);
+    this.filterProjects();
+  }
+
+  protected onSearchChange(query: string) {
+    this.searchQuery.set(query);
+    this.filterProjects();
+  }
+
+  protected clearFilters() {
+    this.selectedStatus.set(null);
+    this.searchQuery.set('');
+    this.filterProjects();
   }
 
   protected onPageChange(page: number): void {
