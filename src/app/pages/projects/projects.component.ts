@@ -273,6 +273,8 @@ export class ProjectsComponent {
   }
 
   protected addComment() {
+    if (this.isSavingComment()) return;
+
     const project = this.activeProjectForComments();
     const message = this.commentDraft().trim();
     if (!project || !message) return;
