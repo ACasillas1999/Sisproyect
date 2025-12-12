@@ -281,15 +281,8 @@ export class ProjectsComponent {
     this.isSavingComment.set(true);
     this.dataService.createProjectComment(project.id, { userId, message }).subscribe({
       next: (saved) => {
-        const normalized = this.normalizeProjectComment(saved, message);
-        this.commentsByProject.update((current) => {
-          const existing = current[project.id] || [];
-          return {
-            ...current,
-            [project.id]: [...existing, normalized],
-          };
-        });
         this.commentDraft.set('');
+        this.loadProjectComments(project.id);
       },
       error: (err) => console.error('Error guardando comentario del proyecto', err),
       complete: () => this.isSavingComment.set(false),

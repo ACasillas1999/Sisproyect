@@ -563,6 +563,7 @@ export class ProjectDetailComponent {
     const project = this.project();
     if (!project) return;
     this.isProjectCommentsPanelOpen.set(true);
+    this.projectCommentDraft.set('');
     if (this.projectComments().length === 0 && !this.projectCommentsLoading()) {
       this.loadProjectComments(project.id);
     }
@@ -594,9 +595,8 @@ export class ProjectDetailComponent {
     this.isSavingProjectComment.set(true);
     this.dataService.createProjectComment(project.id, payload).subscribe({
       next: (comment) => {
-        const normalized = this.normalizeProjectComment(comment, message);
-        this.projectComments.update((current) => [...current, normalized]);
         this.projectCommentDraft.set('');
+        this.loadProjectComments(project.id);
       },
       error: (err) => console.error('Error adding project comment', err),
       complete: () => this.isSavingProjectComment.set(false),
