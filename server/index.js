@@ -303,6 +303,143 @@ async function main() {
     }
   });
 
+  // Project Report - Comprehensive export
+  app.get('/api/projects/:id/report', async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Get project basic info
+      const [projectRows] = await pool.query(
+        'SELECT id, name, description, status, start, end, created_by as createdBy, logo, workspace_id as workspaceId, created_at, updated_at FROM projects WHERE id = ?',
+        [id]
+      );
+      if (!projectRows.length) {
+        return res.status(404).json({ message: 'Proyecto no encontrado' });
+      }
+      const project = projectRows[0];
+
+      // Get workspace info if exists
+      let workspace = null;
+      if (project.workspaceId) {
+        const [workspaceRows] = await pool.query(
+          'SELECT id, name, description, color, icon FROM workspaces WHERE id = ?',
+          [project.workspaceId]
+        );
+        workspace = workspaceRows[0] || null;
+      }
+
+      // Get all tasks
+      const [tasks] = await pool.query(
+        `SELECT t.id, t.project_id as projectId, t.parent_task_id as parentTaskId, t.department_id as departmentId,
+                t.title, t.description, t.assigned_to as assignedTo, t.status, t.priority, t.due, t.effort,
+                t.created_at as createdAt, t.completed_at as completedAt,
+                t.released_version_id as releasedVersionId, pv.version_name as releasedVersionName,
+                u.username as assignedToName, d.name as departmentName, d.color as departmentColor
+         FROM tasks t
+         LEFT JOIN project_versions pv ON t.released_version_id = pv.id
+         LEFT JOIN users u ON t.assigned_to = u.id
+         LEFT JOIN departments d ON t.department_id = d.id
+         WHERE t.project_id = ?`,
+        [id]
+      );
+
+      // Calculate overall progress
+      const totalTasks = tasks.length;
+      const completedTasks = tasks.filter(t => t.status === 'completed' || t.status === 'done').length;
+      const cancelledTasks = tasks.filter(t => t.status === 'cancelled').length;
+      const activeTasks = totalTasks - cancelledTasks;
+      const overallProgress = activeTasks > 0 ? Math.round((completedTasks / activeTasks) * 100) : 0;
+
+      // Get progress by department
+      const [departments] = await pool.query('SELECT id, name, color FROM departments');
+      const progressByDepartment = departments.map(dept => {
+        const deptTasks = tasks.filter(t => t.departmentId === dept.id);
+        const total = deptTasks.length;
+        const completed = deptTasks.filter(t => t.status === 'completed').length;
+        const inProgress = deptTasks.filter(t => t.status === 'in-progress').length;
+        const pending = deptTasks.filter(t => t.status === 'pending').length;
+        const cancelled = deptTasks.filter(t => t.status === 'cancelled').length;
+        const activeDeptTasks = total - cancelled;
+        const progressPercent = activeDeptTasks > 0 ? Math.round((completed / activeDeptTasks) * 100) : 0;
+
+        return {
+          department: dept,
+          total,
+          completed,
+          inProgress,
+          pending,
+          cancelled,
+          progress: progressPercent
+        };
+      }).filter(d => d.total > 0); // Only include departments with tasks
+
+      // Get versions
+      const [versions] = await pool.query(
+        `SELECT pv.id, pv.project_id as projectId, pv.version_name as versionName, pv.created_by as createdBy,
+                pv.created_at as createdAt, u.username as createdByName
+         FROM project_versions pv
+         LEFT JOIN users u ON pv.created_by = u.id
+         WHERE pv.project_id = ?
+         ORDER BY pv.created_at DESC`,
+        [id]
+      );
+
+      // Get documents (both project and task documents)
+      const [projectDocs] = await pool.query(
+        `SELECT d.id, d.project_id AS projectId, d.version_id AS versionId, d.title, d.description,
+                d.file_name AS fileName, d.file_path AS filePath,
+                d.created_by AS createdBy, d.created_at AS createdAt,
+                v.version_name AS versionName, u.username AS createdByName
+         FROM project_documents d
+         LEFT JOIN project_versions v ON v.id = d.version_id
+         LEFT JOIN users u ON u.id = d.created_by
+         WHERE d.project_id = ?`,
+        [id]
+      );
+
+      const [taskDocs] = await pool.query(
+        `SELECT td.id, td.project_id AS projectId, td.title, td.description,
+                td.file_name AS fileName, td.file_path AS filePath,
+                td.created_by AS createdBy, td.created_at AS createdAt,
+                u.username AS createdByName, td.task_id AS taskId, t.title AS taskTitle
+         FROM task_documents td
+         LEFT JOIN users u ON u.id = td.created_by
+         LEFT JOIN tasks t ON t.id = td.task_id
+         WHERE td.project_id = ?`,
+        [id]
+      );
+
+      const allDocuments = [...projectDocs, ...taskDocs];
+
+      // Build comprehensive report
+      const report = {
+        project: {
+          ...project,
+          workspace
+        },
+        summary: {
+          totalTasks,
+          completedTasks,
+          cancelledTasks,
+          activeTasks,
+          overallProgress,
+          totalVersions: versions.length,
+          totalDocuments: allDocuments.length
+        },
+        tasks,
+        progressByDepartment,
+        versions,
+        documents: allDocuments,
+        generatedAt: new Date().toISOString()
+      };
+
+      res.json(report);
+    } catch (err) {
+      console.error('Error generating project report', err);
+      res.status(500).json({ message: 'Error generando reporte del proyecto' });
+    }
+  });
+
   // Configuración de Multer para documentos (usa la misma config global)
   // Ya no necesitamos esta configuración duplicada, usamos la del inicio del archivo
   const upload = multer({

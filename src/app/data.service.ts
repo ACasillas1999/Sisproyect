@@ -152,9 +152,9 @@ export interface VersionSummary {
 }
 
 export interface VersionPreview {
-  tasks: Array<{id: string; title: string; status: string}>;
-  documents: Array<{id: string; title: string; file_name?: string; taskTitle?: string}>;
-  comments: Array<{id: string; comment: string; username: string; taskTitle: string}>;
+  tasks: Array<{ id: string; title: string; status: string }>;
+  documents: Array<{ id: string; title: string; file_name?: string; taskTitle?: string }>;
+  comments: Array<{ id: string; comment: string; username: string; taskTitle: string }>;
   summary: {
     tasksCount: number;
     documentsCount: number;
@@ -357,6 +357,11 @@ export class DataService {
 
   deleteUser(id: string): Observable<{ id: string }> {
     return this.http.delete<{ id: string }>(`${this.apiUrl}/users/${id}`);
+  }
+
+  // Project Report
+  getProjectReport(projectId: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/projects/${projectId}/report`);
   }
 
   // Auth

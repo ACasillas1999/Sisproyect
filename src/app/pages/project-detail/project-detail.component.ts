@@ -1,5 +1,6 @@
-﻿import { Component, computed, inject, signal, effect } from '@angular/core';
+﻿import { Component, computed, inject, signal, effect, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
@@ -37,6 +38,10 @@ export class ProjectDetailComponent {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   private readonly notifications = inject(NotificationService);
+  private readonly sanitizer = inject(DomSanitizer);
+
+  protected showReportPreview = signal(false);
+  protected reportHtmlContent = signal<SafeHtml>('');
 
   protected readonly projectId = signal<string>('');
   protected readonly project = signal<Project | null>(null);
@@ -73,6 +78,7 @@ export class ProjectDetailComponent {
   protected readonly isCreatingVersion = signal(false);
   protected readonly isUploadingDocument = signal(false);
   protected readonly isAddingComment = signal(false);
+  protected readonly isExportingReport = signal(false);
 
   // Paginación de comentarios
   protected readonly commentsPage = signal(1);
@@ -88,7 +94,7 @@ export class ProjectDetailComponent {
 
   // File Preview
   protected readonly showFilePreview = signal(false);
-  protected readonly previewFile = signal<{url: string, name: string, type: string} | null>(null);
+  protected readonly previewFile = signal<{ url: string, name: string, type: string } | null>(null);
 
   protected readonly newTask = signal({
     title: '',
@@ -342,8 +348,8 @@ export class ProjectDetailComponent {
     this.dataService.updateTask(taskId, { status: status as any }).subscribe({
       next: () => {
         const statusText = status === 'completed' ? 'completada' :
-                          status === 'in-progress' ? 'en progreso' :
-                          status === 'cancelled' ? 'cancelada' : 'pendiente';
+          status === 'in-progress' ? 'en progreso' :
+            status === 'cancelled' ? 'cancelada' : 'pendiente';
         this.notifications.success(`Tarea marcada como ${statusText}`);
         this.loadTasks();
         this.loadProgress();
@@ -832,15 +838,535 @@ export class ProjectDetailComponent {
       error: (err) => console.error('Error updating project', err),
     });
   }
+
+  protected exportProjectReport() {
+    this.isExportingReport.set(true);
+    this.dataService.getProjectReport(this.projectId()).subscribe({
+      next: (report) => {
+        this.isExportingReport.set(false);
+
+        // Generate professional HTML report
+        const htmlReport = this.generateHTMLReport(report);
+
+        // Set content and show modal
+        this.reportHtmlContent.set(this.sanitizer.bypassSecurityTrustHtml(htmlReport));
+        this.showReportPreview.set(true);
+
+        this.notifications.success('Reporte generado correctamente');
+      },
+      error: (err) => {
+        this.isExportingReport.set(false);
+        console.error('Error exporting report', err);
+        this.notifications.error('Error al exportar el reporte');
+      },
+    });
+  }
+
+  protected closeReportPreview() {
+    this.showReportPreview.set(false);
+    this.reportHtmlContent.set('');
+  }
+
+  protected printReportPreview() {
+    const iframe = document.getElementById('report-iframe') as HTMLIFrameElement;
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.print();
+    }
+  }
+
+  private generateHTMLReport(report: any): string {
+    const projectName = report.project.name || 'Proyecto';
+    const projectDesc = report.project.description || 'Sin descripción';
+    const projectStatus = report.project.status === 'production' ? 'Producción' : 'En Desarrollo';
+    const overallProgress = report.summary.overallProgress || 0;
+    const generatedDate = new Date(report.generatedAt).toLocaleDateString('es-MX', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Fix logo path - User requested system favicon
+    const logoUrl = 'favicon.ico';
+
+    // Filter departments with tasks
+    const activeDepartments = report.progressByDepartment.filter((dept: any) => dept.total > 0);
+
+    // Generate department progress HTML
+    const departmentsHTML = activeDepartments.map((dept: any) => `
+      <div class="dept-card">
+        <div class="dept-header">
+          <div class="dept-name" style="background-color: ${dept.department.color}">
+            ${dept.department.name}
+          </div>
+          <div class="dept-progress-text">${dept.progress}%</div>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" style="width: ${dept.progress}%; background-color: ${dept.department.color}"></div>
+        </div>
+        <div class="dept-stats">
+          <span>Total: ${dept.total}</span>
+          <span>Completadas: ${dept.completed}</span>
+          <span>En Progreso: ${dept.inProgress}</span>
+          <span>Pendientes: ${dept.pending}</span>
+        </div>
+      </div>
+    `).join('');
+
+    // Generate tasks HTML
+    const tasksHTML = report.tasks.map((task: any) => {
+      const statusColors: any = {
+        'pending': '#f59e0b',
+        'in-progress': '#2563eb', // Standard Blue
+        'completed': '#10b981',
+        'cancelled': '#ef4444'
+      };
+      const statusLabels: any = {
+        'pending': 'Pendiente',
+        'in-progress': 'En Progreso',
+        'completed': 'Completada',
+        'cancelled': 'Cancelada'
+      };
+
+      const createdDate = new Date(task.createdAt).toLocaleDateString('es-MX', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+
+      return `
+        <tr>
+          <td>${task.title}</td>
+          <td>${task.departmentName || 'N/A'}</td>
+          <td>${createdDate}</td>
+          <td>${task.assignedToName || 'Sin asignar'}</td>
+          <td>
+            <span class="status-badge" style="background-color: ${statusColors[task.status]} !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+              ${statusLabels[task.status]}
+            </span>
+          </td>
+          <td>${task.priority === 'alta' ? 'Alta' : task.priority === 'media' ? 'Media' : 'Baja'}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <style>
+    /* Force background colors printing */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte - ${projectName}</title>
+  <style>
+    /* Ultra-Compact Print Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.2;
+      color: #333;
+      background: white;
+      font-size: 11px; /* Base font small */
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 100%;
+      margin: 0 auto;
+      background: white;
+    }
+    
+    /* Header Compact */
+    .header {
+      border-bottom: 2px solid #2563eb;
+      padding: 5px 15px; /* Minimal padding */
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .brand-area {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-logo {
+      height: 16px;
+      width: 16px;
+      object-fit: contain;
+    }
+
+    .brand-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .report-info {
+      text-align: right;
+    }
+
+    .report-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: 700;
+    }
+
+    .project-title-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    
+    .content {
+      padding: 0 15px;
+    }
+
+    .section {
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      color: #0f172a;
+      margin-bottom: 5px;
+      padding-bottom: 2px;
+      border-bottom: 1px solid #e2e8f0;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    /* Summary Grid - Ultra Compact */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .summary-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      padding: 4px;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .summary-card .number {
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1;
+      color: #2563eb;
+    }
+
+    .summary-card .label {
+      font-size: 9px;
+      color: #64748b;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    /* Overall Progress */
+    .overall-progress {
+      background: #f8fafc;
+      padding: 5px 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .overall-progress h3 {
+      margin: 0;
+      color: #334155;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .progress-bar-container {
+      background: #cbd5e1;
+      height: 12px; /* Thin bar */
+      border-radius: 6px;
+      overflow: hidden;
+      flex-grow: 1;
+    }
+    
+    .progress-bar-fill {
+      height: 100%;
+      background-color: #2563eb !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 12px;
+    }
+    
+    /* Department Grid */
+    .dept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+    }
+    
+    .dept-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 6px;
+      background: white;
+    }
+
+    .dept-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .dept-name {
+      color: white;
+      padding: 1px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 10px;
+    }
+
+    .dept-progress-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .dept-stats {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      font-size: 9px;
+      color: #64748b;
+    }
+    
+    /* Table Compact */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px; /* Small table text */
+    }
+    
+    th {
+      background: #f1f5f9;
+      color: #475569;
+      padding: 4px 6px;
+      text-align: left;
+      font-weight: 700;
+      border-bottom: 2px solid #e2e8f0;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+    
+    td {
+      padding: 3px 6px; /* Super compact cells */
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    
+    .footer {
+      background: #f8fafc;
+      padding: 30px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      
+      .container {
+        box-shadow: none;
+        max-width: 100%;
+      }
+
+      .no-print {
+        display: none;
+      }
+
+      .header {
+        padding: 20px 0;
+      }
+
+      .summary-card {
+        border: 1px solid #cbd5e1;
+      }
+      
+      .section {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand-area">
+        <img src="favicon.ico" alt="SisProyect" class="brand-logo" onerror="this.onerror=null; this.src='assets/images/logo.png'">
+        <span class="brand-name">SISPROYECT</span>
+      </div>
+      <div class="report-info">
+        <div class="report-label">REPORTE DE PROYECTO</div>
+        <div class="project-title-header">${projectName}</div>
+        <div style="font-size: 10px; color: #64748b; margin-top: 2px;">
+          ${projectStatus.toUpperCase()}
+        </div>
+      </div>
+    </div>
+    
+    <div class="content">
+      <!-- Summary Section -->
+      <div class="section">
+        <h2 class="section-title">RESUMEN DEL PROYECTO</h2>
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="number">${report.summary.totalTasks}</div>
+            <div class="label">Total Tareas</div>
+          </div>
+          <div class="summary-card">
+            <div class="number">${report.summary.completedTasks}</div>
+            <div class="label">Completadas</div>
+          </div>
+          <div class="summary-card">
+            <div class="number">${report.summary.activeTasks}</div>
+            <div class="label">Activas</div>
+          </div>
+          <div class="summary-card">
+            <div class="number">${report.summary.totalVersions}</div>
+            <div class="label">Versiones</div>
+          </div>
+        </div>
+        
+        <div class="overall-progress">
+          <h3>PROGRESO GENERAL</h3>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: ${overallProgress}%">
+              ${overallProgress}%
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      ${activeDepartments.length > 0 ? `
+      <!-- Department Progress -->
+      <div class="section">
+        <h2 class="section-title">PROGRESO POR DEPARTAMENTO</h2>
+        <div class="dept-grid">
+          ${departmentsHTML}
+        </div>
+      </div>
+      ` : ''}
+      
+      <!-- Tasks Table -->
+      <div class="section">
+        <h2 class="section-title">DETALLE DE TAREAS (${report.tasks.length})</h2>
+        ${report.tasks.length > 0 ? `
+        <table>
+          <thead>
+            <tr>
+              <th>Tarea</th>
+              <th>Departamento</th>
+              <th>Fecha Creación</th>
+              <th>Asignado a</th>
+              <th>Estado</th>
+              <th>Prioridad</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tasksHTML}
+          </tbody>
+        </table>
+        ` : '<p style="color: #64748b; font-style: italic;">No hay tareas registradas en este proyecto.</p>'}
+      </div>
+      
+      ${report.versions.length > 0 ? `
+      <!-- Versions -->
+      <div class="section">
+        <h2 class="section-title">HISTORIAL DE VERSIONES</h2>
+        <table style="width: 100%;">
+          <thead>
+             <tr>
+               <th>Versión</th>
+               <th>Creada por</th>
+               <th>Fecha</th>
+             </tr>
+          </thead>
+          <tbody>
+          ${report.versions.map((v: any) => `
+            <tr>
+              <td><strong>${v.versionName}</strong></td>
+              <td>${v.createdByName || 'Sistema'}</td>
+              <td>${new Date(v.createdAt).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+            </tr>
+          `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+    </div>
+    
+    <div class="footer">
+      <p><strong>SisProyect</strong> - Sistema de Gestión de Proyectos</p>
+      <p>Reporte generado el ${generatedDate}</p>
+    </div>
+  </div>
+  <script>
+    // No auto-print inside modal, user triggers it manually
+  </script>
+</body>
+</html>
+    `;
+  }
 }
 
 interface TaskNode {
   task: Task;
   children: TaskNode[];
 }
-
-
-
-
-
-

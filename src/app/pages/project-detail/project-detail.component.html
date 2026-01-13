@@ -32,6 +32,18 @@
             </svg>
             Comentarios
           </button>
+          <button class="action-btn" (click)="exportProjectReport()" [disabled]="isExportingReport()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="7 10 12 15 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="12" y1="15" x2="12" y2="3" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            @if (isExportingReport()) {
+              Exportando...
+            } @else {
+              Exportar Reporte
+            }
+          </button>
           @if (canManageProject()) {
             <button class="primary-btn" (click)="openCreateVersionModal()">
               Guardar Versión
@@ -131,7 +143,29 @@
             }
           </select>
         </div>
+      
+  @if (showReportPreview()) {
+    <div class="modal-overlay">
+      <div class="modal-container report-preview-modal">
+        <div class="modal-header">
+          <h2>Vista Previa del Reporte</h2>
+          <button class="close-btn" (click)="closeReportPreview()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body report-body">
+          <iframe id="report-iframe" [srcdoc]="reportHtmlContent()"></iframe>
+        </div>
+        <div class="modal-footer">
+          <button class="secondary-btn" (click)="closeReportPreview()">Cerrar</button>
+          <button class="primary-btn" (click)="printReportPreview()">
+            <i class="fas fa-print"></i> Imprimir / Guardar PDF
+          </button>
+        </div>
       </div>
+    </div>
+  }
+</div>
       <div class="current-filter-info">
         <span class="filter-label">Mostrando:</span>
         <span class="filter-value">{{ getVersionFilterLabel() }}</span>

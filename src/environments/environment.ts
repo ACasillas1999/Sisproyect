@@ -1,5 +1,5 @@
 export const environment = {
 
-  apiUrl: '/sisproyect/api',
+  apiUrl: 'http://192.168.60.117:3000/api',
 
 };
