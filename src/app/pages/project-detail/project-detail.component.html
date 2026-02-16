@@ -418,8 +418,8 @@
               </svg>
             </button>
           }
-          @if ((node.task.status === 'completed' || node.task.status === 'cancelled') && canManageStatus(node.task) && node.task.isOwnDepartment !== false) {
-            <button class="action-btn-small info" (click)="openTaskDetail(node.task)" title="Ver Detalles">
+          @if (node.task.isOwnDepartment !== false) {
+            <button class="action-btn-small info" (click)="openTaskDetail(node.task)" title="Comentarios y Detalles">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <circle cx="12" cy="12" r="10" stroke-width="2"/>
                 <line x1="12" y1="16" x2="12" y2="12" stroke-width="2" stroke-linecap="round"/>
