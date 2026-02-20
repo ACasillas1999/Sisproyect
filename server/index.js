@@ -1,5 +1,6 @@
 require('dotenv/config');
 const express = require('express');
+const session = require('express-session');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
@@ -55,6 +56,21 @@ async function main() {
   const pool = await createPool();
   await initTables(pool);
   const app = express();
+  
+  // Trust proxy is required for secure cookies behind a reverse proxy (Nginx)
+  app.set('trust proxy', 1);
+  
+  // Configure session cookies for Microfrontend compatibility
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'sisproyect-secret-key',
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+      secure: true,      // Required for SameSite=None
+      sameSite: 'none',  // Allow cross-site usage in iframes
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
 
   // CORS configuration - allow multiple origins
   const allowedOrigins = [
@@ -1423,10 +1439,37 @@ async function main() {
       if (!ok) {
         return res.status(401).json({ message: 'Credenciales invalidas' });
       }
-      res.json({ ok: true, user: { id: user.id, username: user.username, role: user.role, departmentId: user.department_id } });
+
+      // Store user in session
+      req.session.user = { 
+        id: user.id, 
+        username: user.username, 
+        role: user.role, 
+        departmentId: user.department_id 
+      };
+
+      res.json({ ok: true, user: req.session.user });
     } catch (err) {
       console.error('Error en login', err);
       res.status(500).json({ message: 'Error en login' });
+    }
+  });
+
+  app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Error cerrando sesión' });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ message: 'Sesión cerrada' });
+    });
+  });
+
+  app.get('/api/session', (req, res) => {
+    if (req.session.user) {
+      res.json({ ok: true, user: req.session.user });
+    } else {
+      res.status(401).json({ ok: false, message: 'No hay sesión activa' });
     }
   });
 
@@ -1442,6 +1485,12 @@ async function main() {
         return res.status(404).json({ message: 'Usuario no encontrado' });
       }
       const user = rows[0];
+      
+      // Update session if it exists but is different (optional but good for consistency)
+      if (req.session.user && req.session.user.id === userId) {
+        req.session.user = { id: user.id, username: user.username, role: user.role, departmentId: user.department_id };
+      }
+      
       res.json({ user: { id: user.id, username: user.username, role: user.role, departmentId: user.department_id } });
     } catch (err) {
       console.error('Error refrescando sesión', err);
