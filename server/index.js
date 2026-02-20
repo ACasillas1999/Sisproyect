@@ -1421,7 +1421,14 @@ async function main() {
   app.post('/api/login', async (req, res) => {
     try {
       const { username, password } = req.body ?? {};
+      console.log('Login attempt:', { username, hasPassword: !!password });
+      
+      if (!req.session) {
+        console.error('Session middleware not initializing correctly!');
+      }
+
       if (!username || !password) {
+        console.log('Login failed: Missing credentials');
         return res.status(400).json({ message: 'username y password son requeridos' });
       }
       const [rows] = await pool.query(
@@ -1429,16 +1436,21 @@ async function main() {
         [username, username],
       );
       if (!rows.length) {
+        console.log('Login failed: User not found', username);
         return res.status(401).json({ message: 'Credenciales invalidas' });
       }
       const user = rows[0];
       if (!user.active) {
+        console.log('Login failed: User inactive', username);
         return res.status(401).json({ message: 'Usuario inactivo' });
       }
       const ok = await bcrypt.compare(password, user.password_hash);
       if (!ok) {
+        console.log('Login failed: Password mismatch for', username);
         return res.status(401).json({ message: 'Credenciales invalidas' });
       }
+
+      console.log('Login successful for:', username);
 
       // Store user in session
       req.session.user = { 
