@@ -1,6 +1,7 @@
 require('dotenv/config');
 const express = require('express');
 const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
@@ -60,15 +61,20 @@ async function main() {
   // Trust proxy is required for secure cookies behind a reverse proxy (Nginx)
   app.set('trust proxy', 1);
   
+  // Instance MySQL session store
+  const sessionStore = new MySQLStore({}, pool);
+  
   // Configure session cookies for Microfrontend compatibility
   app.use(session({
+    key: 'sisproyect_session',
     secret: process.env.SESSION_SECRET || 'sisproyect-secret-key',
+    store: sessionStore,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false, // Changed to false for better security
     cookie: {
       secure: true,      // Required for SameSite=None
       sameSite: 'none',  // Allow cross-site usage in iframes
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     }
   }));
 
